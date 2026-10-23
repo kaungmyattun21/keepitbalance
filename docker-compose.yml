@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:18
+    container_name: keepittrack-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}   # local dev only
+    ports:
+      - "127.0.0.1:5432:5432"           # host:container, this machine only. Use "127.0.0.1:5433:5432" if 5432 is busy
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: keepittrack-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?Set PGADMIN_EMAIL in .env}          # pgAdmin's own login (not a database role)
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Set PGADMIN_PASSWORD in .env} # local dev only
+    ports:
+      - "127.0.0.1:5050:80"                      # open http://localhost:5050
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin            # keeps your saved servers and settings
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+  pgadmin-data:
