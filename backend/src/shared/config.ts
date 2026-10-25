@@ -3,7 +3,10 @@ import "dotenv/config";
 import { z } from "zod";
 
 // Empty values in .env (GOOGLE_CLIENT_ID=) count as "not set".
-const optional = z.string().optional().transform((value) => value || undefined);
+const optional = z
+  .string()
+  .optional()
+  .transform((value) => value || undefined);
 
 const envSchema = z
   .object({
