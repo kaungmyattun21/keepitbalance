@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,5 +22,10 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+  },
+  // Vitest (D-022) reuses this file, so tests resolve "@/..." exactly like the app.
+  test: {
+    environment: "node", // component tests will switch to jsdom per file (Phase 4)
+    include: ["src/**/*.test.{ts,tsx}"],
   },
 });
