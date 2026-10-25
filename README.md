@@ -4,7 +4,7 @@
 
 <!-- Add a screenshot or demo GIF here once something works. -->
 
-**Live demo:** _link_ · **Docs:** [Requirements](docs/1-requirements.md) · [Design](docs/2-design.md) · [Decisions](docs/3-decisions.md)
+**Live demo:** _link_
 
 ## Features
 
@@ -16,14 +16,14 @@
 
 | Layer    | Choice | Why (one line) |
 |----------|--------|----------------|
-| Frontend | Vite, React 19, React Router, TanStack Query, Zustand, React Hook Form + Zod, shadcn/ui + Tailwind | Login-gated dashboard: an SPA is the simplest fit (D-003) |
-| Backend  | Express 5, TypeScript, Zod, Better Auth | Separate API with a clear routes → service → repository split (D-002, D-015, D-018) |
-| Database | PostgreSQL + Prisma | Relational data and all-or-nothing transactions (D-009) |
+| Frontend | Vite, React 19, React Router, TanStack Query, Zustand, React Hook Form + Zod, shadcn/ui + Tailwind | Login-gated dashboard: an SPA is the simplest fit |
+| Backend  | Express 5, TypeScript, Zod, Better Auth | Separate API with a clear routes → controller → service → repository split |
+| Database | PostgreSQL + Prisma | Relational data and all-or-nothing transactions |
 | Hosting  | _TBD_ | |
 
 ## Architecture
 
-<!-- Copy the container diagram from docs/2-design.md here. -->
+<!-- Add an architecture diagram here. -->
 
 ## Getting Started
 
@@ -49,14 +49,14 @@ pnpm --filter backend db:migrate        # apply migrations + generate the Prisma
 pnpm dev                                # web: http://localhost:5173 · API: http://localhost:3000/api/v1
 ```
 
-In development the web app forwards `/api/*` to the API (Vite proxy, D-020), so open only <http://localhost:5173>.
+In development the web app forwards `/api/*` to the API (Vite proxy), so open only <http://localhost:5173>.
 Verification and password-reset emails are printed in the API's terminal.
 
 | Command | What it does |
 |---|---|
 | `pnpm dev` | Start API and web app together |
 | `pnpm typecheck` | Type-check both apps |
-| `pnpm lint` | Lint (includes module-boundary rules, D-014) |
+| `pnpm lint` | Lint (includes module-boundary rules) |
 | `pnpm build` | Build both apps |
 | `pnpm format` / `pnpm format:check` | Prettier |
 
