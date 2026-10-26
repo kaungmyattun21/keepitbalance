@@ -1,13 +1,6 @@
-export type ErrorCode =
-  | "VALIDATION_ERROR"
-  | "CATEGORY_TYPE_MISMATCH"
-  | "UNAUTHORIZED"
-  | "NOT_FOUND"
-  | "CONFLICT"
-  | "CATEGORY_IN_USE"
-  | "DUPLICATE_NAME"
-  | "TRANSACTION_FROM_SHOPPING"
-  | "INTERNAL_ERROR";
+import type { ErrorCode } from "@keepitbalance/shared/api";
+
+export type { ErrorCode };
 
 export class AppError extends Error {
   constructor(

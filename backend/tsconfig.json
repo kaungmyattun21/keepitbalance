@@ -5,10 +5,8 @@
     "moduleResolution": "nodenext",
     "lib": ["es2023"],
     "types": ["node"],
-
-    "rootDir": "src",
-    "outDir": "dist",
-    "sourceMap": true,
+    "customConditions": ["development"],
+    "noEmit": true,
 
     // The generated Prisma client imports with ".ts" extensions; tsc rewrites them to ".js" on build.
     "allowImportingTsExtensions": true,
@@ -24,5 +22,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src", "prisma.config.ts"]
 }

@@ -1,6 +1,12 @@
 import { hash, verify } from "argon2";
 import { APIError, betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import {
+  isValidTimezone,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  userAdditionalFields,
+} from "@keepitbalance/shared/auth";
 import { config } from "../../../shared/config.ts";
 import { prisma } from "../../../shared/db.ts";
 import { sendEmailInBackground } from "../../../shared/mailer.ts";
@@ -13,16 +19,6 @@ export function onUserCreated(handler: UserCreatedHandler): void {
   userCreatedHandlers.push(handler);
 }
 
-// Intl.supportedValuesOf("timeZone") omits valid names such as "UTC" and "Asia/Yangon".
-function isValidTimezone(timezone: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export const auth = betterAuth({
   appName: "KeepItBalance",
   baseURL: config.auth.url,
@@ -33,9 +29,7 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
   user: {
-    additionalFields: {
-      timezone: { type: "string", required: false, defaultValue: "UTC", input: true },
-    },
+    additionalFields: userAdditionalFields,
   },
 
   session: {
@@ -47,8 +41,8 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
     requireEmailVerification: false,
-    minPasswordLength: 8,
-    maxPasswordLength: 128,
+    minPasswordLength: PASSWORD_MIN_LENGTH,
+    maxPasswordLength: PASSWORD_MAX_LENGTH,
     password: {
       hash: (password) => hash(password),
       verify: ({ hash: passwordHash, password }) => verify(passwordHash, password),

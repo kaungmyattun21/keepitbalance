@@ -2,7 +2,7 @@ import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
 import express, { json, Router } from "express";
 import helmet from "helmet";
-import { auth, meRoutes, onUserCreated } from "./modules/auth/index.ts";
+import { auth, authConfigRoutes, meRoutes, onUserCreated } from "./modules/auth/index.ts";
 import { createDefaultCategories } from "./modules/finance/index.ts";
 import { config } from "./shared/config.ts";
 import { prisma } from "./shared/db.ts";
@@ -28,6 +28,7 @@ api.get("/health", async (_req, res) => {
   res.json({ status: "ok" });
 });
 
+api.use("/auth-config", authConfigRoutes);
 api.use("/me", meRoutes);
 
 app.use("/api/v1", api);

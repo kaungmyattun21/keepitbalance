@@ -1,5 +1,6 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { HeartPulse, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
+import { useCurrentUser } from "@/modules/auth";
 import { api } from "@/shared/lib/api";
 import { ensureQuery } from "@/shared/lib/query-client";
 
@@ -20,13 +21,16 @@ const upcomingModules: { title: string; description: string; icon: LucideIcon }[
 ];
 
 export function Component() {
+  const user = useCurrentUser();
   const { data: apiStatus } = useSuspenseQuery(apiStatusQuery);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <header>
         <h1 className="font-heading text-2xl font-semibold">Dashboard</h1>
-        <p className="text-muted-foreground">Your overview appears here as each module is added.</p>
+        <p className="text-muted-foreground">
+          Welcome back, {user.name}. Your overview appears here as each module is added.
+        </p>
       </header>
 
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

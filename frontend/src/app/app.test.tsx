@@ -7,13 +7,13 @@ import { RouterProvider } from "react-router/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, setUnauthorizedHandler } from "@/shared/lib/api";
 import { queryClient } from "@/shared/lib/query-client";
+import { createFetchMock, json } from "@/shared/test/fetch-mock";
+import { sessionFixture } from "@/shared/test/session-fixture";
 import { routes } from "./routes.ts";
 import { redirectToLoginOnSessionExpiry } from "./session-expiry.ts";
 
-const fetchMock = vi.fn<typeof fetch>();
-
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+const server = createFetchMock();
+let session: ReturnType<typeof sessionFixture> | null;
 
 function renderAt(path: string) {
   const memoryRouter = createMemoryRouter(routes, { initialEntries: [path] });
@@ -26,13 +26,21 @@ function renderAt(path: string) {
 }
 
 beforeEach(() => {
-  vi.stubGlobal("fetch", fetchMock);
+  session = sessionFixture();
+  vi.stubGlobal("fetch", server.fetch);
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+  );
+  server.on("GET /api/v1/auth/get-session", () => json(200, session));
+  server.on("GET /api/v1/auth-config", () => json(200, { google: false }));
+  server.on("GET /api/v1/health", () => json(200, { status: "ok" }));
 });
 
 afterEach(() => {
   cleanup();
   queryClient.clear();
-  fetchMock.mockReset();
+  server.reset();
   vi.unstubAllGlobals();
   localStorage.clear();
   setUnauthorizedHandler(undefined);
@@ -40,18 +48,14 @@ afterEach(() => {
 
 describe("app shell", () => {
   it("loads the dashboard's data before rendering it", async () => {
-    fetchMock.mockResolvedValue(json(200, { status: "ok" }));
-
     renderAt("/");
 
     expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeTruthy();
+    expect(screen.getByText(/Welcome back, Kaung/)).toBeTruthy();
     expect(screen.getByTestId("api-status").textContent).toBe("ok");
-    expect(fetchMock).toHaveBeenCalledWith("/api/v1/health", expect.anything());
   });
 
   it("shows modules that aren't built yet as disabled, not as links", async () => {
-    fetchMock.mockResolvedValue(json(200, { status: "ok" }));
-
     renderAt("/");
     await screen.findByRole("heading", { name: "Dashboard" });
 
@@ -67,18 +71,28 @@ describe("app shell", () => {
   });
 
   it("retries a temporary server error automatically", async () => {
-    fetchMock.mockResolvedValueOnce(json(500, { error: { code: "INTERNAL_ERROR", message: "Oops" } }));
-    fetchMock.mockResolvedValue(json(200, { status: "ok" }));
+    let calls = 0;
+    server.on("GET /api/v1/health", () => {
+      calls += 1;
+      return calls === 1
+        ? json(500, { error: { code: "INTERNAL_ERROR", message: "Oops" } })
+        : json(200, { status: "ok" });
+    });
 
     renderAt("/");
 
     expect(await screen.findByRole("heading", { name: "Dashboard" }, { timeout: 3000 })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(calls).toBe(2);
   });
 
   it("shows an error with a working retry when a loader fails for good", async () => {
-    fetchMock.mockResolvedValueOnce(json(404, { error: { code: "NOT_FOUND", message: "Gone for now" } }));
-    fetchMock.mockResolvedValue(json(200, { status: "ok" }));
+    let calls = 0;
+    server.on("GET /api/v1/health", () => {
+      calls += 1;
+      return calls === 1
+        ? json(404, { error: { code: "NOT_FOUND", message: "Gone for now" } })
+        : json(200, { status: "ok" });
+    });
 
     renderAt("/");
 
@@ -89,14 +103,37 @@ describe("app shell", () => {
   });
 });
 
+describe("authentication", () => {
+  it("sends logged-out visitors to /login and remembers where they were going", async () => {
+    session = null;
+    const router = renderAt("/does-not-exist?month=2026-09");
+
+    expect(await screen.findByRole("heading", { name: "Log in" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(new URLSearchParams(router.state.location.search).get("redirectTo")).toBe(
+      "/does-not-exist?month=2026-09",
+    );
+  });
+
+  it("keeps logged-in users away from the login page", async () => {
+    const router = renderAt("/login");
+
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe("/");
+  });
+});
+
 describe("session expiry", () => {
   it("clears cached data and redirects to /login, remembering where the user was", async () => {
-    fetchMock.mockResolvedValue(json(401, { error: { code: "UNAUTHORIZED", message: "Not logged in" } }));
     const router = renderAt("/somewhere?month=2026-09");
     redirectToLoginOnSessionExpiry(router);
     await screen.findByRole("heading", { name: "Page not found" });
     queryClient.setQueryData(["finance", "transactions"], ["private data"]);
 
+    session = null;
+    server.on("GET /api/v1/me", () =>
+      json(401, { error: { code: "UNAUTHORIZED", message: "Not logged in" } }),
+    );
     await api.get("/me").catch(() => {});
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/login"));

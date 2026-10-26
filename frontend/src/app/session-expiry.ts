@@ -1,8 +1,7 @@
 import type { DataRouter } from "react-router";
+import { PUBLIC_PATHS } from "@/modules/auth";
 import { setUnauthorizedHandler } from "@/shared/lib/api";
 import { queryClient } from "@/shared/lib/query-client";
-
-const PUBLIC_PATHS = new Set(["/login", "/signup", "/forgot-password", "/reset-password", "/verified"]);
 
 export function redirectToLoginOnSessionExpiry(router: DataRouter): void {
   setUnauthorizedHandler(() => {

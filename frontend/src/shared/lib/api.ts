@@ -1,18 +1,7 @@
+import type { ErrorCode, ValidationIssue } from "@keepitbalance/shared/api";
 import { env } from "./env.ts";
 
-export type ApiErrorCode =
-  | "VALIDATION_ERROR"
-  | "CATEGORY_TYPE_MISMATCH"
-  | "UNAUTHORIZED"
-  | "NOT_FOUND"
-  | "CONFLICT"
-  | "CATEGORY_IN_USE"
-  | "DUPLICATE_NAME"
-  | "TRANSACTION_FROM_SHOPPING"
-  | "INTERNAL_ERROR"
-  | "NETWORK_ERROR";
-
-export type ValidationIssue = { location: string; path: string; message: string };
+export type ApiErrorCode = ErrorCode | "NETWORK_ERROR";
 
 export class ApiError extends Error {
   readonly status: number;

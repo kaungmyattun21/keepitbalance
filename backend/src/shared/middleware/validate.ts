@@ -1,3 +1,4 @@
+import type { ValidationIssue } from "@keepitbalance/shared/api";
 import type { RequestHandler } from "express";
 import { z } from "zod";
 import { badRequest } from "../errors.ts";
@@ -11,7 +12,7 @@ type Schemas = {
 export const validate =
   (schemas: Schemas): RequestHandler =>
   (req, _res, next) => {
-    const details: { location: string; path: string; message: string }[] = [];
+    const details: ValidationIssue[] = [];
 
     for (const location of ["params", "query", "body"] as const) {
       const schema = schemas[location];
