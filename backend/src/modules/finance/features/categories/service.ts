@@ -1,6 +1,5 @@
 import * as repository from "./repository.ts";
 
-// FR-3: every new account starts with these (Groceries is used by "finish shopping", FR-10).
 const DEFAULT_CATEGORIES = [
   { type: "EXPENSE", name: "Groceries" },
   { type: "EXPENSE", name: "Housing" },

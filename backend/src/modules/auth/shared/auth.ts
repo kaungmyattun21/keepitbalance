@@ -1,14 +1,11 @@
-// The Better Auth instance (D-018, D-019). It owns the users, sessions, accounts and
-// verifications tables and serves every /api/v1/auth/* endpoint.
-import argon2 from "argon2";
+import { hash, verify } from "argon2";
 import { APIError, betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { config } from "../../shared/config.ts";
-import { prisma } from "../../shared/db.ts";
-import { sendEmailInBackground } from "../../shared/mailer.ts";
+import { config } from "../../../shared/config.ts";
+import { prisma } from "../../../shared/db.ts";
+import { sendEmailInBackground } from "../../../shared/mailer.ts";
 
-// Other modules react to signups without Auth importing them (Finance → Auth, never the reverse, D-014).
-// app.ts registers the handlers, e.g. onUserCreated(createDefaultCategories).
+// Lets other modules react to signups without auth depending on them; handlers are registered in app.ts.
 type UserCreatedHandler = (userId: string) => Promise<void>;
 const userCreatedHandlers: UserCreatedHandler[] = [];
 
@@ -16,8 +13,7 @@ export function onUserCreated(handler: UserCreatedHandler): void {
   userCreatedHandlers.push(handler);
 }
 
-// Intl.supportedValuesOf("timeZone") misses valid names such as "UTC" and "Asia/Yangon",
-// so ask the formatter instead: it throws a RangeError for unknown time zones.
+// Intl.supportedValuesOf("timeZone") omits valid names such as "UTC" and "Asia/Yangon".
 function isValidTimezone(timezone: string): boolean {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: timezone });
@@ -32,37 +28,34 @@ export const auth = betterAuth({
   baseURL: config.auth.url,
   basePath: "/api/v1/auth",
   secret: config.auth.secret,
-  // Requests from other origins are rejected, and redirects (callbackURL) may only go here.
   trustedOrigins: [config.webUrl],
 
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
   user: {
     additionalFields: {
-      // Sent at signup by the frontend (Intl.DateTimeFormat().resolvedOptions().timeZone).
       timezone: { type: "string", required: false, defaultValue: "UTC", input: true },
     },
   },
 
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // extend the expiry at most once a day while the user is active
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
   },
 
   emailAndPassword: {
     enabled: true,
-    autoSignIn: true, // FR-1: signing up logs you in
-    requireEmailVerification: false, // verification matters for account linking only (D-019)
+    autoSignIn: true,
+    requireEmailVerification: false,
     minPasswordLength: 8,
     maxPasswordLength: 128,
     password: {
-      // argon2id instead of Better Auth's default scrypt (NFR-1).
-      hash: (password) => argon2.hash(password),
-      verify: ({ hash, password }) => argon2.verify(hash, password),
+      hash: (password) => hash(password),
+      verify: ({ hash: passwordHash, password }) => verify(passwordHash, password),
     },
-    resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
+    resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
-    // Emails are sent without awaiting, so the response time doesn't reveal whether the email exists.
+    // Not awaited, so response timing doesn't reveal whether the email exists.
     sendResetPassword: async ({ user, url }) => {
       sendEmailInBackground({
         to: user.email,
@@ -75,7 +68,7 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
-    expiresIn: 60 * 60 * 24, // 1 day
+    expiresIn: 60 * 60 * 24,
     sendVerificationEmail: async ({ user, url }) => {
       sendEmailInBackground({
         to: user.email,
@@ -90,19 +83,17 @@ export const auth = betterAuth({
         google: {
           clientId: config.auth.google.clientId,
           clientSecret: config.auth.google.clientSecret,
-          prompt: "select_account", // let people pick which Google account to use
+          prompt: "select_account",
         },
       }
     : {},
 
   account: {
-    // Same email = same person, but only when both sides proved it (D-019).
-    // Better Auth requires the existing user's email to be verified before linking.
+    // Linking also requires the existing user's email to be verified (Better Auth default).
     accountLinking: {
       enabled: true,
       trustedProviders: ["google"],
     },
-    // Google's access/refresh tokens are encrypted with BETTER_AUTH_SECRET before they're stored.
     encryptOAuthTokens: true,
   },
 
@@ -120,7 +111,7 @@ export const auth = betterAuth({
             try {
               await handler(user.id);
             } catch (err) {
-              // The user already exists at this point; failing the signup would only confuse them.
+              // The user already exists here; failing the signup would only confuse them.
               console.error(`onUserCreated handler failed for user ${user.id}:`, err);
             }
           }
@@ -129,8 +120,6 @@ export const auth = betterAuth({
     },
   },
 
-  // Errors during browser redirects (e.g. Google sign-in) land on the frontend as /login?error=<code>,
-  // for example error=account_not_linked (D-019).
   onAPIError: {
     errorURL: `${config.webUrl}/login`,
   },
@@ -139,7 +128,7 @@ export const auth = betterAuth({
     cookiePrefix: "keepitbalance",
     useSecureCookies: config.isProduction,
     database: {
-      generateId: "uuid", // our id columns are uuid
+      generateId: "uuid",
     },
   },
 });

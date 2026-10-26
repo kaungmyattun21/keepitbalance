@@ -47,9 +47,9 @@ enum ShoppingListStatus {
 }
 
 // ---------------------------------------------------------------------------
-// Auth — tables managed by Better Auth (D-018). Field names must match what
+// Auth — tables managed by Better Auth. Field names must match what
 // Better Auth expects (name, emailVerified, token, providerId, ...); only the
-// column names are ours (@map). Change them only together with src/modules/auth/auth.ts.
+// column names are ours (@map). Change them only together with src/modules/auth/shared/auth.ts.
 // ---------------------------------------------------------------------------
 
 model User {
@@ -95,7 +95,7 @@ model Session {
   @@map("sessions")
 }
 
-// One row per sign-in method of a user (D-019).
+// One row per sign-in method of a user.
 //   providerId "credential": accountId = user id, password = argon2 hash
 //   providerId "google":     accountId = Google's user id, OAuth tokens
 model Account {
@@ -148,7 +148,7 @@ model Category {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
-  @@unique([userId, type, name]) // no duplicate names per user + type (FR-3)
+  @@unique([userId, type, name]) // no duplicate names per user + type
   @@unique([id, userId, type]) // target of the composite FK on Transaction
   @@map("categories")
 }

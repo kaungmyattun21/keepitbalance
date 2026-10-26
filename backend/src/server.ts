@@ -1,4 +1,3 @@
-// Entry point: starts the HTTP server and shuts it down cleanly.
 import { app } from "./app.ts";
 import { config } from "./shared/config.ts";
 import { prisma } from "./shared/db.ts";
@@ -7,13 +6,18 @@ const server = app.listen(config.port, () => {
   console.log(`API listening on http://localhost:${config.port}/api/v1 (${config.env})`);
 });
 
-async function shutdown(signal: string) {
+function shutdown(signal: string) {
   console.log(`${signal} received, shutting down`);
-  server.close(async () => {
-    await prisma.$disconnect();
-    process.exit(0);
+  server.close(() => {
+    prisma.$disconnect().then(
+      () => process.exit(0),
+      (err: unknown) => {
+        console.error("Failed to disconnect from the database:", err);
+        process.exit(1);
+      },
+    );
   });
 }
 
-process.on("SIGINT", () => void shutdown("SIGINT"));
-process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));

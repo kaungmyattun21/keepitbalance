@@ -16,12 +16,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* "@/shared/lib/api" → src/shared/lib/api. Mirrored in vite.config.ts (resolve.alias). */
     "paths": {
       "@/*": ["./src/*"]
     },
 
-    /* Type checking — same strictness as the backend */
+    /* Type checking */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,

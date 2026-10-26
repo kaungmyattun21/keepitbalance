@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { getUserId } from "../require-auth.ts";
+import { getUserId } from "../../shared/require-auth.ts";
 import * as service from "./service.ts";
 
 export async function getMe(req: Request, res: Response) {

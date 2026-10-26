@@ -1,9 +1,5 @@
-// Client for our own API (/api/v1/*). Auth endpoints (/api/v1/auth/*) go through
-// Better Auth's client instead (modules/auth/auth-client.ts), which has its own error shape (D-018).
 import { env } from "./env.ts";
 
-// Mirrors the backend's ErrorCode (backend/src/shared/errors.ts) plus client-side codes.
-// Moves to the shared package in milestone 2 (D-006).
 export type ApiErrorCode =
   | "VALIDATION_ERROR"
   | "CATEGORY_TYPE_MISMATCH"
@@ -14,12 +10,12 @@ export type ApiErrorCode =
   | "DUPLICATE_NAME"
   | "TRANSACTION_FROM_SHOPPING"
   | "INTERNAL_ERROR"
-  | "NETWORK_ERROR"; // client-side: no response (offline, API down, proxy error)
+  | "NETWORK_ERROR";
 
 export type ValidationIssue = { location: string; path: string; message: string };
 
 export class ApiError extends Error {
-  readonly status: number; // 0 when no response arrived
+  readonly status: number;
   readonly code: ApiErrorCode;
   readonly details: unknown;
 
@@ -31,7 +27,6 @@ export class ApiError extends Error {
     this.details = details;
   }
 
-  // VALIDATION_ERROR details, e.g. to show messages next to form fields.
   get validationIssues(): ValidationIssue[] {
     return this.code === "VALIDATION_ERROR" && Array.isArray(this.details)
       ? (this.details as ValidationIssue[])
@@ -39,8 +34,6 @@ export class ApiError extends Error {
   }
 }
 
-// What to do when the session has ended. Registered by app/ (Phase 1): clear the query cache and go to /login.
-// shared/ can't import app/ (D-013), so app/ plugs its handler in here.
 type UnauthorizedHandler = (error: ApiError) => void;
 let onUnauthorized: UnauthorizedHandler | undefined;
 
@@ -53,7 +46,7 @@ type QueryValue = string | number | boolean | null | undefined;
 type RequestOptions = {
   query?: Record<string, QueryValue>;
   body?: unknown;
-  signal?: AbortSignal; // TanStack Query passes one, so leaving a page cancels its requests
+  signal?: AbortSignal;
 };
 
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
@@ -64,13 +57,13 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   try {
     response = await fetch(url, {
       method,
-      credentials: "include", // send the session cookie (also needed if the API is ever on another origin)
+      credentials: "include",
       headers: { Accept: "application/json", ...(hasBody && { "Content-Type": "application/json" }) },
       body: hasBody ? JSON.stringify(options.body) : undefined,
       signal: options.signal,
     });
   } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") throw err; // let TanStack Query handle cancels
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
     throw new ApiError(0, "NETWORK_ERROR", "Can't reach the server. Check your connection and try again.");
   }
 
@@ -95,8 +88,6 @@ function buildUrl(path: string, query?: Record<string, QueryValue>): string {
   return search ? `${url}?${search}` : url;
 }
 
-// Our error shape is { error: { code, message, details? } }. Anything else (e.g. an HTML 502 from the
-// dev proxy when the API isn't running) becomes a generic error with the right status.
 async function toApiError(response: Response): Promise<ApiError> {
   const body: unknown = await response.json().catch(() => undefined);
   const error = (body as { error?: { code?: unknown; message?: unknown; details?: unknown } } | undefined)

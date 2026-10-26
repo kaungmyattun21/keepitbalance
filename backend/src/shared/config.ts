@@ -1,8 +1,7 @@
-// Environment variables, validated once at startup. Import `config` instead of reading process.env.
 import "dotenv/config";
 import { z } from "zod";
 
-// Empty values in .env (GOOGLE_CLIENT_ID=) count as "not set".
+// An empty value in .env (GOOGLE_CLIENT_ID=) counts as not set.
 const optional = z
   .string()
   .optional()
@@ -13,11 +12,9 @@ const envSchema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.coerce.number().int().positive().default(3000),
     DATABASE_URL: z.url(),
-    // Origin of the frontend: allowed by CORS, trusted by Better Auth for redirects (D-018).
     WEB_URL: z.url().default("http://localhost:5173"),
-    // Public origin of this API. Better Auth builds callback and email links from it.
     BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
-    // Signs session cookies and tokens. Changing it logs everyone out.
+    // Changing it logs everyone out.
     BETTER_AUTH_SECRET: z.string().min(32, "Must be at least 32 characters"),
     GOOGLE_CLIENT_ID: optional,
     GOOGLE_CLIENT_SECRET: optional,
@@ -45,7 +42,6 @@ export const config = {
   auth: {
     url: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    // Google sign-in is turned on only when both values are set.
     google:
       env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
         ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }

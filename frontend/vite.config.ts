@@ -12,10 +12,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173, // must match WEB_URL in backend/.env (CORS + Better Auth trustedOrigins)
+    port: 5173,
     strictPort: true,
-    // D-020: the browser only talks to this dev server; /api/* is forwarded to Express.
-    // Same origin in dev → no CORS, relative URLs ("/api/v1/me") in the app.
     proxy: {
       "/api": "http://localhost:3000",
     },
@@ -23,9 +21,8 @@ export default defineConfig({
   build: {
     sourcemap: true,
   },
-  // Vitest (D-022) reuses this file, so tests resolve "@/..." exactly like the app.
   test: {
-    environment: "node", // component tests will switch to jsdom per file (Phase 4)
+    environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
   },
 });

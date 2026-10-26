@@ -1,20 +1,10 @@
-// Build-time settings, validated once. Import `env` instead of reading import.meta.env.
-import { z } from "zod";
+const DEFAULT_API_BASE_URL = "/api/v1";
 
-const envSchema = z.object({
-  // Relative by default: the Vite dev proxy (D-020) and, in production, the frontend host forward /api.
-  // Set an absolute URL only if the API is served from another origin (then CORS applies).
-  VITE_API_BASE_URL: z.string().min(1).default("/api/v1"),
-  DEV: z.boolean(),
-});
-
-const parsed = envSchema.safeParse(import.meta.env);
-
-if (!parsed.success) {
-  throw new Error("Invalid frontend environment variables:\n" + z.prettifyError(parsed.error));
+function readApiBaseUrl(): string {
+  const value = import.meta.env.VITE_API_BASE_URL?.trim();
+  return (value || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 }
 
 export const env = {
-  apiBaseUrl: parsed.data.VITE_API_BASE_URL.replace(/\/$/, ""),
-  isDev: parsed.data.DEV,
+  apiBaseUrl: readApiBaseUrl(),
 } as const;

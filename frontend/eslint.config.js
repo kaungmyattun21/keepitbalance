@@ -7,16 +7,11 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-// ---------------------------------------------------------------------------
-// Module boundaries (D-013, D-014)
-//
-// Which business modules each module may use. Dependencies are one-way:
-// Groceries → Finance, Health → Groceries, everyone → Auth. Anything not
-// listed here is forbidden. Allowed imports must go through the module's
-// index.ts (its public API), never its internal files.
-// ---------------------------------------------------------------------------
-const MODULES = ["auth", "finance", "groceries", "health"];
+// Module boundaries: allowed dependencies go through the target module's index.ts; all others are errors.
+const MODULES = ["shell", "dashboard", "auth", "finance", "groceries", "health"];
 const ALLOWED_DEPENDENCIES = {
+  shell: [],
+  dashboard: ["auth", "finance", "groceries", "health"],
   auth: [],
   finance: ["auth"],
   groceries: ["auth", "finance"],
@@ -31,29 +26,28 @@ const moduleZones = MODULES.flatMap((target) =>
       from: `./src/modules/${from}`,
       ...(allowed && { except: ["./index.ts"] }),
       message: allowed
-        ? `Import "${from}" through its public API: "@/modules/${from}" (D-014).`
-        : `Module "${target}" may not depend on "${from}" (D-014: dependencies are one-way).`,
+        ? `Import "${from}" through its public API: "@/modules/${from}".`
+        : `Module "${target}" may not depend on "${from}": dependencies are one-way.`,
     };
   }),
 );
 
 const layerZones = [
   {
-    // app/ (router, providers, layout) composes modules, but only through their public API.
     target: "./src/app",
     from: "./src/modules",
     except: MODULES.map((name) => `./${name}/index.ts`),
-    message: "app/ imports modules through their public API: @/modules/<name> (D-014).",
+    message: "app/ imports modules through their public API: @/modules/<name>.",
   },
   {
     target: "./src/shared",
     from: ["./src/modules", "./src/app"],
-    message: "shared/ is used by modules; it must not import from modules/ or app/ (D-013).",
+    message: "shared/ is used by modules; it must not import from modules/ or app/.",
   },
   {
     target: "./src/modules",
     from: "./src/app",
-    message: "Modules must not import from app/ (D-013).",
+    message: "Modules must not import from app/.",
   },
 ];
 
@@ -74,20 +68,21 @@ export default defineConfig([
       globals: globals.browser,
     },
     settings: {
-      // Resolves the "@/..." alias from tsconfig.app.json, so boundaries apply to aliased imports too.
       "import-x/resolver-next": [createTypeScriptImportResolver({ project: "./tsconfig.app.json" })],
     },
     rules: {
       "import-x/no-restricted-paths": ["error", { zones: [...moduleZones, ...layerZones] }],
       "import-x/no-cycle": "error",
-      // TypeScript already reports unresolved imports and missing named exports.
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true, allowExportNames: ["loader", "action", "Component", "ErrorBoundary"] },
+      ],
       "import-x/no-unresolved": "off",
       "import-x/named": "off",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
   {
-    // shadcn components export variant helpers next to the component; that's fine for Fast Refresh.
     files: ["src/shared/components/ui/**/*.tsx"],
     rules: { "react-refresh/only-export-components": "off" },
   },

@@ -1,4 +1,4 @@
-import { prisma } from "../../../shared/db.ts";
+import { prisma } from "../../../../shared/db.ts";
 
 export function findUserById(userId: string) {
   return prisma.user.findUnique({

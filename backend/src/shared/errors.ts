@@ -1,6 +1,3 @@
-// Errors that map to the API error format: { error: { code, message, details? } }.
-// Services throw these; the error middleware turns them into responses.
-
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "CATEGORY_TYPE_MISMATCH"

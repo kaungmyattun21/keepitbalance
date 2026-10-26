@@ -8,8 +8,6 @@ type Schemas = {
   params?: z.ZodType;
 };
 
-// Validates and replaces req.body / req.query / req.params with the parsed (coerced, defaulted) values.
-// Usage: router.post("/", validate({ body: createTransactionSchema }), controller.create)
 export const validate =
   (schemas: Schemas): RequestHandler =>
   (req, _res, next) => {
@@ -27,7 +25,7 @@ export const validate =
         continue;
       }
 
-      // Express 5 makes req.query a getter, so define an own property instead of assigning.
+      // Express 5 makes req.query a getter, so it can't be assigned.
       Object.defineProperty(req, location, { value: result.data, writable: true, configurable: true });
     }
 
