@@ -1,5 +1,7 @@
 # KeepItBalance
 
+[![CI](https://github.com/kaungmyattun21/keepitbalance/actions/workflows/ci.yml/badge.svg)](https://github.com/kaungmyattun21/keepitbalance/actions/workflows/ci.yml)
+
 > One sentence: what it does and who it's for.
 
 <!-- Add a screenshot or demo GIF here once something works. -->
@@ -56,9 +58,23 @@ Verification and password-reset emails are printed in the API's terminal.
 |---|---|
 | `pnpm dev` | Start API and web app together |
 | `pnpm typecheck` | Type-check both apps |
+| `pnpm test` | Run all tests (shared package, frontend, backend) |
 | `pnpm lint` | Lint (includes module-boundary rules) |
 | `pnpm build` | Build both apps |
 | `pnpm format` / `pnpm format:check` | Prettier |
+
+## Testing
+
+```bash
+pnpm test                              # everything
+pnpm --filter frontend test:watch      # frontend, rerun on save
+```
+
+- **Frontend:** Vitest + Testing Library (jsdom); the API is mocked at `fetch`.
+- **Backend:** Vitest + supertest against a real PostgreSQL database. Tests use `<your database>_test`
+  (e.g. `keepitbalance_test`), which is created and migrated automatically on the first run; set
+  `TEST_DATABASE_URL` to use a different one. The name must end in `_test`, so your dev data is never touched.
+- **CI:** GitHub Actions runs format, lint, typecheck, tests and build on every push to `main` and every pull request.
 
 ## What I Learned
 

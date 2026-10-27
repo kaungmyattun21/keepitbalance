@@ -119,6 +119,8 @@ export const auth = betterAuth({
   },
 
   advanced: {
+    // Better Auth skips the origin check when NODE_ENV=test; keep it on so tests match production.
+    disableOriginCheck: false,
     cookiePrefix: "keepitbalance",
     useSecureCookies: config.isProduction,
     database: {

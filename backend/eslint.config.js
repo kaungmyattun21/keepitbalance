@@ -50,7 +50,7 @@ const layerZones = [
 export default defineConfig([
   globalIgnores(["dist", "src/generated"]),
   {
-    files: ["src/**/*.ts", "prisma.config.ts"],
+    files: ["src/**/*.ts", "prisma.config.ts", "vitest.config.ts"],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
