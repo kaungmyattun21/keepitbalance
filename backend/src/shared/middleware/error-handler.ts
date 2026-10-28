@@ -25,6 +25,15 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 function toAppError(err: unknown): AppError {
   if (err instanceof AppError) return err;
 
+  if (err instanceof Error && "type" in err) {
+    if (err.type === "entity.too.large") {
+      return new AppError(413, "PAYLOAD_TOO_LARGE", "Request body must not exceed 100 KiB");
+    }
+    if (err.type === "encoding.unsupported" || err.type === "charset.unsupported") {
+      return new AppError(415, "UNSUPPORTED_MEDIA_TYPE", "Unsupported request encoding");
+    }
+  }
+
   if (err instanceof SyntaxError && "type" in err && err.type === "entity.parse.failed") {
     return new AppError(400, "VALIDATION_ERROR", "Request body is not valid JSON");
   }

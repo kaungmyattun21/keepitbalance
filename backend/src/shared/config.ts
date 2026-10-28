@@ -14,6 +14,11 @@ const envSchema = z
     DATABASE_URL: z.url(),
     WEB_URL: z.url().default("http://localhost:5173"),
     BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
+    TRUSTED_PROXIES: z
+      .string()
+      .default("")
+      .transform((value) => (value.trim() ? value.split(",").map((entry) => entry.trim()) : []))
+      .pipe(z.array(z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]))),
     // Changing it logs everyone out.
     BETTER_AUTH_SECRET: z.string().min(32, "Must be at least 32 characters"),
     GOOGLE_CLIENT_ID: optional,
@@ -38,6 +43,7 @@ export const config = {
   isProduction: env.NODE_ENV === "production",
   port: env.PORT,
   databaseUrl: env.DATABASE_URL,
+  trustedProxies: env.TRUSTED_PROXIES,
   webUrl: env.WEB_URL,
   auth: {
     url: env.BETTER_AUTH_URL,

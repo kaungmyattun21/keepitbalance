@@ -10,6 +10,7 @@ import {
 import { config } from "../../../shared/config.ts";
 import { prisma } from "../../../shared/db.ts";
 import { sendEmailInBackground } from "../../../shared/mailer.ts";
+import { CLIENT_IP_HEADER } from "../../../shared/middleware/trusted-proxy.ts";
 
 // Lets other modules react to signups without auth depending on them; handlers are registered in app.ts.
 type UserCreatedHandler = (userId: string) => Promise<void>;
@@ -119,6 +120,8 @@ export const auth = betterAuth({
   },
 
   advanced: {
+    ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
+    trustedProxyHeaders: false,
     // Better Auth skips the origin check when NODE_ENV=test; keep it on so tests match production.
     disableOriginCheck: false,
     cookiePrefix: "keepitbalance",

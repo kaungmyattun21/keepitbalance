@@ -63,6 +63,29 @@ Verification and password-reset emails are printed in the API's terminal.
 | `pnpm build` | Build both apps |
 | `pnpm format` / `pnpm format:check` | Prettier |
 
+## API request limits and reverse proxies
+
+JSON API bodies and all authentication bodies are limited to 100 KiB, including streamed/chunked
+requests. Larger bodies return `413`; compressed request bodies are unsupported and return `415`.
+
+`TRUSTED_PROXIES` defaults to empty: client addresses come from the TCP connection, and client-supplied
+forwarded IP/protocol headers are ignored. When deploying behind a proxy, set it to a comma-separated
+list of that proxy's IP addresses or CIDRs. For a proxy on the same host, for example:
+
+```dotenv
+TRUSTED_PROXIES=127.0.0.1/32,::1/128
+```
+
+Configure the proxy to overwrite `X-Forwarded-Proto` and overwrite or safely append to
+`X-Forwarded-For`. Restrict access to the API to the intended proxy network. Express resolves the
+client from the socket through the trusted chain; Better Auth uses a server-written client-IP header
+for sessions and rate limiting. Client-supplied copies of that internal header are overwritten.
+Better Auth's production rate-limit counters remain per process; use shared storage before scaling
+to multiple API instances. Configure a matching body limit at the proxy as well.
+
+The workspace pins patched transitive versions of `body-parser`, `mysql2`, and Prisma's `deepmerge-ts`
+through pnpm overrides. Revisit these overrides when upstream dependencies adopt the patched versions.
+
 ## Testing
 
 ```bash

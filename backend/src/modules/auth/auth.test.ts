@@ -1,9 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { prisma } from "../../shared/db.ts";
+import { CLIENT_IP_HEADER } from "../../shared/middleware/trusted-proxy.ts";
 import { newAgent, sessionCookie, signUp, testUser, WEB_ORIGIN } from "../../test/http.ts";
 import { lastLinkSentTo, outbox } from "../../test/outbox.ts";
 
 describe("sign-up", () => {
+  it("still accepts form-encoded authentication bodies", async () => {
+    const response = await newAgent().post("/api/v1/auth/sign-up/email").type("form").send(testUser);
+
+    expect(response.status).toBe(200);
+    expect(await prisma.user.findFirstOrThrow()).toMatchObject({ email: testUser.email });
+  });
+
+  it("records the socket address instead of client-supplied IP headers", async () => {
+    const agent = newAgent().set("X-Forwarded-For", "198.51.100.10").set(CLIENT_IP_HEADER, "198.51.100.20");
+    await signUp(agent);
+
+    const session = await prisma.session.findFirstOrThrow();
+    expect(session.ipAddress).toBe("127.0.0.1");
+  });
+
   it("creates the user, an argon2id password hash, a session and default categories", async () => {
     const agent = newAgent();
     const response = await signUp(agent);
