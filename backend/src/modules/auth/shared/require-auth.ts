@@ -20,10 +20,16 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   }
 
   req.userId = session.user.id;
+  req.userTimezone = session.user.timezone ?? "UTC";
   next();
 };
 
 export function getUserId(req: Request): string {
   if (!req.userId) throw unauthorized();
   return req.userId;
+}
+
+export function getUserTimezone(req: Request): string {
+  if (!req.userTimezone) throw unauthorized();
+  return req.userTimezone;
 }

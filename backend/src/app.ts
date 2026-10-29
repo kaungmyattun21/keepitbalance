@@ -3,7 +3,7 @@ import cors from "cors";
 import express, { json, Router, text } from "express";
 import helmet from "helmet";
 import { auth, authConfigRoutes, meRoutes, onUserCreated } from "./modules/auth/index.ts";
-import { createDefaultCategories } from "./modules/finance/index.ts";
+import { categoryRoutes, createDefaultCategories, transactionRoutes } from "./modules/finance/index.ts";
 import { config } from "./shared/config.ts";
 import { prisma } from "./shared/db.ts";
 import { errorHandler, notFoundHandler } from "./shared/middleware/error-handler.ts";
@@ -41,6 +41,8 @@ api.get("/health", async (_req, res) => {
 
 api.use("/auth-config", authConfigRoutes);
 api.use("/me", meRoutes);
+api.use("/categories", categoryRoutes);
+api.use("/transactions", transactionRoutes);
 
 app.use("/api/v1", api);
 

@@ -7,3 +7,11 @@ export function createMany(userId: string, categories: { type: TransactionType; 
     skipDuplicates: true,
   });
 }
+
+export function findMany(userId: string, type?: TransactionType) {
+  return prisma.category.findMany({
+    where: { userId, type },
+    select: { id: true, name: true, type: true },
+    orderBy: [{ type: "asc" }, { name: "asc" }],
+  });
+}

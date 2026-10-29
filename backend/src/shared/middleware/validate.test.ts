@@ -1,4 +1,4 @@
-import express from "express";
+import express, { json } from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { errorHandler } from "./error-handler.ts";
 import { validate } from "./validate.ts";
 
 const testApp = express()
-  .use(express.json())
+  .use(json())
   .get(
     "/items/:id",
     validate({

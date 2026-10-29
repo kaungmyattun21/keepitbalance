@@ -1,3 +1,5 @@
+import type { Category, ListCategoriesQuery } from "@keepitbalance/shared/finance";
+import { toApiType, toDbType } from "../../shared/transaction-type.ts";
 import * as repository from "./repository.ts";
 
 const DEFAULT_CATEGORIES = [
@@ -13,4 +15,9 @@ const DEFAULT_CATEGORIES = [
 
 export async function createDefaultCategories(userId: string): Promise<void> {
   await repository.createMany(userId, [...DEFAULT_CATEGORIES]);
+}
+
+export async function listCategories(userId: string, query: ListCategoriesQuery): Promise<Category[]> {
+  const rows = await repository.findMany(userId, query.type && toDbType[query.type]);
+  return rows.map((row) => ({ id: row.id, name: row.name, type: toApiType[row.type] }));
 }
