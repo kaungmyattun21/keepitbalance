@@ -1,3 +1,4 @@
+import { TriangleAlert } from "lucide-react";
 import { isRouteErrorResponse, useRevalidator, useRouteError } from "react-router";
 import { Button } from "@/shared/components/ui/button";
 import { PageMessage } from "@/shared/components/PageMessage";
@@ -13,6 +14,7 @@ export function RouteErrorBoundary() {
 
   return (
     <PageMessage
+      icon={TriangleAlert}
       title="Couldn't load this page"
       description={error instanceof ApiError ? error.message : "Something went wrong. Please try again."}
       action={

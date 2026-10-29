@@ -2,14 +2,9 @@ import { CircleCheck, CircleX } from "lucide-react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "@/shared/components/ui/button";
 import { AuthCard } from "../../shared/components/AuthCard.tsx";
-import { refetchSession, useSession } from "../../shared/session.ts";
+import { useSession } from "../../shared/session.ts";
 
-export async function loader() {
-  await refetchSession();
-  return null;
-}
-
-export function Component() {
+export function VerifiedPage() {
   const [searchParams] = useSearchParams();
   const session = useSession();
   const error = searchParams.get("error");

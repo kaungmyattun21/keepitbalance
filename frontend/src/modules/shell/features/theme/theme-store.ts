@@ -13,7 +13,7 @@ export const THEME_STORAGE_KEY = "keepitbalance-theme";
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: "system",
+      theme: "dark",
       setTheme: (theme) => set({ theme }),
     }),
     { name: THEME_STORAGE_KEY, partialize: ({ theme }) => ({ theme }) },

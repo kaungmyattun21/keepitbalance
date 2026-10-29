@@ -8,7 +8,7 @@ export function NavigationProgress() {
     <div
       role="progressbar"
       aria-label="Loading page"
-      className="fixed inset-x-0 top-0 z-50 h-0.5 animate-pulse bg-primary"
+      className="fixed inset-x-0 top-0 z-50 h-0.5 bg-brand motion-safe:animate-pulse"
     />
   );
 }

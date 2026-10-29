@@ -13,26 +13,28 @@ export function Sidebar({ navItems }: { navItems: NavItem[] }) {
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-svh shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] md:flex",
-        collapsed ? "w-16 items-center" : "w-60",
+        "sticky top-0 hidden h-svh shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:flex",
+        collapsed ? "w-[4.5rem] items-center" : "w-64",
       )}
     >
-      <div className={cn("flex h-14 items-center", collapsed ? "justify-center" : "px-4")}>
+      <div className={cn("flex h-16 items-center", collapsed ? "justify-center" : "px-5")}>
         <Brand iconOnly={collapsed} />
       </div>
 
-      <nav aria-label="Main" className="flex flex-1 flex-col gap-1 p-2">
+      <nav aria-label="Main" className={cn("flex flex-1 flex-col gap-0.5 py-3", collapsed ? "px-2" : "px-3")}>
         {navItems.map((item) => (
           <NavItemLink key={item.to} item={item} variant={collapsed ? "compact" : "sidebar"} />
         ))}
       </nav>
 
-      <div className="p-2">
+      <div className={cn("py-3", collapsed ? "px-2" : "px-3")}>
         <Button
           variant="ghost"
           size="icon"
+          className="text-muted-foreground"
           onClick={toggleSidebar}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
         >
           {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
         </Button>

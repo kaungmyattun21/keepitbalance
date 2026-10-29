@@ -10,7 +10,7 @@ import { FieldGroup } from "@/shared/components/ui/field";
 import { authClient } from "../../shared/auth-client.ts";
 import { authErrorMessage } from "../../shared/auth-errors.ts";
 import { AuthCard } from "../../shared/components/AuthCard.tsx";
-import { FormAlert } from "../../shared/components/FormAlert.tsx";
+import { FormAlert } from "@/shared/components/form/FormAlert";
 import { passwordSchema } from "@keepitbalance/shared/schemas";
 
 const resetPasswordSchema = z
@@ -31,7 +31,7 @@ const requestNewLink = (
   </Link>
 );
 
-export function Component() {
+export function ResetPasswordPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");

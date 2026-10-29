@@ -24,7 +24,7 @@ export function createFetchMock() {
 
   return {
     fetch,
-    on(route: `${"GET" | "POST" | "PATCH" | "DELETE"} /${string}`, handler: Handler) {
+    on(route: `${"GET" | "POST" | "PUT" | "PATCH" | "DELETE"} /${string}`, handler: Handler) {
       handlers.set(route, handler);
     },
     calls(route: string) {

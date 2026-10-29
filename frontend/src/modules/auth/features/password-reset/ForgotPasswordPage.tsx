@@ -10,7 +10,7 @@ import { FieldGroup } from "@/shared/components/ui/field";
 import { authClient } from "../../shared/auth-client.ts";
 import { authErrorMessage } from "../../shared/auth-errors.ts";
 import { AuthCard } from "../../shared/components/AuthCard.tsx";
-import { FormAlert } from "../../shared/components/FormAlert.tsx";
+import { FormAlert } from "@/shared/components/form/FormAlert";
 import { absoluteUrl } from "../../shared/redirect.ts";
 import { emailSchema } from "@keepitbalance/shared/schemas";
 
@@ -24,7 +24,7 @@ const backToLogin = (
   </Link>
 );
 
-export function Component() {
+export function ForgotPasswordPage() {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 

@@ -21,6 +21,11 @@ export function refetchSession() {
   return queryClient.query({ ...sessionQuery, staleTime: 0 });
 }
 
+// For loaders, which can't use hooks; requireSession has already loaded the session.
+export function cachedUserTimezone(): string {
+  return queryClient.getQueryData(sessionQuery.queryKey)?.user.timezone ?? "UTC";
+}
+
 export function useSession() {
   return useSuspenseQuery(sessionQuery).data;
 }

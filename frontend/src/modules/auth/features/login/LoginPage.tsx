@@ -7,12 +7,11 @@ import { z } from "zod";
 import { TextField } from "@/shared/components/form/TextField";
 import { Button } from "@/shared/components/ui/button";
 import { FieldGroup, FieldSeparator } from "@/shared/components/ui/field";
-import { ensureQuery } from "@/shared/lib/query-client";
 import { authClient } from "../../shared/auth-client.ts";
 import { authConfigQuery } from "../../shared/auth-config.ts";
 import { authErrorMessage, redirectErrorMessage } from "../../shared/auth-errors.ts";
 import { AuthCard } from "../../shared/components/AuthCard.tsx";
-import { FormAlert } from "../../shared/components/FormAlert.tsx";
+import { FormAlert } from "@/shared/components/form/FormAlert";
 import { GoogleButton } from "../../shared/components/GoogleButton.tsx";
 import { safeRedirectPath } from "../../shared/redirect.ts";
 import { emailSchema } from "@keepitbalance/shared/schemas";
@@ -25,12 +24,7 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-export async function loader() {
-  await ensureQuery(authConfigQuery);
-  return null;
-}
-
-export function Component() {
+export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { data: authConfig } = useSuspenseQuery(authConfigQuery);

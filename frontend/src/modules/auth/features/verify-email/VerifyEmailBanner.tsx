@@ -31,7 +31,7 @@ export function VerifyEmailBanner() {
   }
 
   return (
-    <Alert className="mb-6">
+    <Alert role="status" className="mb-8">
       <MailWarning aria-hidden />
       <AlertTitle>Verify your email</AlertTitle>
       <AlertDescription>

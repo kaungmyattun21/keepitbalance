@@ -60,7 +60,17 @@ describe("app shell", () => {
     await screen.findByRole("heading", { name: "Dashboard" });
 
     expect(screen.getAllByRole("link", { name: "Dashboard" }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: /Finance/ })).toBeNull();
+    expect(screen.getAllByRole("link", { name: "Finance" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: /Meals/ })).toBeNull();
+  });
+
+  it("names each page in the document title and lets keyboard users skip to the content", async () => {
+    renderAt("/");
+    await screen.findByRole("heading", { name: "Dashboard" });
+
+    await waitFor(() => expect(document.title).toBe("Dashboard · KeepItBalance"));
+    const skipLink = screen.getByRole("link", { name: "Skip to content" });
+    expect(document.querySelector(skipLink.getAttribute("href")!)?.tagName).toBe("MAIN");
   });
 
   it("renders unknown routes as 'not found' inside the shell", async () => {

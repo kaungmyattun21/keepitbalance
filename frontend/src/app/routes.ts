@@ -2,14 +2,15 @@ import type { RouteObject } from "react-router";
 import {
   AuthLayout,
   guestOnly,
-  loadForgotPasswordPage,
-  loadLoginPage,
-  loadResetPasswordPage,
-  loadSignupPage,
-  loadVerifiedPage,
+  lazyForgotPasswordPage,
+  lazyLoginPage,
+  lazyResetPasswordPage,
+  lazySignupPage,
+  lazyVerifiedPage,
   requireSession,
 } from "@/modules/auth";
-import { loadDashboardPage } from "@/modules/dashboard";
+import { lazyDashboardPage } from "@/modules/dashboard";
+import { lazyFinancePage } from "@/modules/finance";
 import { NotFoundPage, PageLoader, RouteErrorBoundary } from "@/modules/shell";
 import { AppShell } from "./AppShell.tsx";
 
@@ -24,7 +25,8 @@ export const routes: RouteObject[] = [
       {
         ErrorBoundary: RouteErrorBoundary,
         children: [
-          { index: true, lazy: loadDashboardPage },
+          { index: true, lazy: lazyDashboardPage },
+          { path: "finance", lazy: lazyFinancePage },
           { path: "*", Component: NotFoundPage },
         ],
       },
@@ -38,13 +40,13 @@ export const routes: RouteObject[] = [
       {
         middleware: [guestOnly],
         children: [
-          { path: "login", lazy: loadLoginPage },
-          { path: "signup", lazy: loadSignupPage },
-          { path: "forgot-password", lazy: loadForgotPasswordPage },
+          { path: "login", lazy: lazyLoginPage },
+          { path: "signup", lazy: lazySignupPage },
+          { path: "forgot-password", lazy: lazyForgotPasswordPage },
         ],
       },
-      { path: "reset-password", lazy: loadResetPasswordPage },
-      { path: "verified", lazy: loadVerifiedPage },
+      { path: "reset-password", lazy: lazyResetPasswordPage },
+      { path: "verified", lazy: lazyVerifiedPage },
     ],
   },
 ];

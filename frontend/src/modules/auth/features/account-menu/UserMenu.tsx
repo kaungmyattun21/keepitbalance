@@ -48,16 +48,21 @@ export function UserMenu() {
           aria-label={`Account menu for ${user.name}`}
         >
           {user.image ? (
-            <img src={user.image} alt="" className="size-8 rounded-full" referrerPolicy="no-referrer" />
+            <img
+              src={user.image}
+              alt=""
+              className="size-8 rounded-full ring-1 ring-border"
+              referrerPolicy="no-referrer"
+            />
           ) : (
-            <span className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
+            <span className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold ring-1 ring-border">
               {initials(user.name)}
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col">
+        <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
           <span className="truncate font-medium">{user.name}</span>
           <span className="truncate text-xs font-normal text-muted-foreground">{user.email}</span>
         </DropdownMenuLabel>

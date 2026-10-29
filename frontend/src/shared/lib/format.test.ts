@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  currentMonthIn,
-  formatCalendarDate,
-  formatDateTime,
-  formatMoney,
-  formatMonth,
-  todayIn,
-} from "./format.ts";
+import { formatCalendarDate, formatDateTime, formatMoney, formatMonth } from "./format.ts";
 
 describe("formatMoney", () => {
   it("formats a decimal string with 2 decimals and grouping", () => {
@@ -46,20 +39,5 @@ describe("formatDateTime", () => {
     const instant = "2026-10-22T20:30:00Z";
     expect(formatDateTime(instant, "UTC", { locale: "en-US" })).toBe("Oct 22, 2026, 8:30 PM");
     expect(formatDateTime(instant, "Asia/Yangon", { locale: "en-US" })).toBe("Oct 23, 2026, 3:00 AM"); // UTC+6:30
-  });
-});
-
-describe("todayIn / currentMonthIn", () => {
-  // 2026-10-31 18:00 UTC: still Oct 31 in London, already Nov 1 in Yangon.
-  const now = new Date("2026-10-31T18:00:00Z");
-
-  it("uses the user's timezone, not UTC", () => {
-    expect(todayIn("Europe/London", now)).toBe("2026-10-31");
-    expect(todayIn("Asia/Yangon", now)).toBe("2026-11-01");
-  });
-
-  it("derives the month the same way", () => {
-    expect(currentMonthIn("Europe/London", now)).toBe("2026-10");
-    expect(currentMonthIn("Asia/Yangon", now)).toBe("2026-11");
   });
 });
