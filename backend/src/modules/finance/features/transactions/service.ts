@@ -4,6 +4,8 @@ import type {
   CreateTransactionValues,
   ListTransactionsQuery,
   Transaction,
+  TransactionSummary,
+  TransactionSummaryQuery,
   UpdateTransactionValues,
 } from "@keepitbalance/shared/finance";
 import type { TransactionType as DbTransactionType } from "../../../../generated/prisma/client.ts";
@@ -12,6 +14,7 @@ import { monthDateRange, toDbDate } from "../../shared/calendar-date.ts";
 import { toDbType } from "../../shared/transaction-type.ts";
 import * as repository from "./repository.ts";
 import { toTransactionResponse } from "./transaction-response.ts";
+import { toTransactionSummary } from "./transaction-summary.ts";
 
 export async function createTransaction(
   userId: string,
@@ -52,6 +55,28 @@ export async function listTransactions(
     total,
     totalPages: Math.ceil(total / query.pageSize),
   };
+}
+
+export async function summarizeTransactions(
+  userId: string,
+  timezone: string,
+  query: TransactionSummaryQuery,
+): Promise<TransactionSummary> {
+  const month = query.month ?? currentMonthIn(timezone);
+  const { from, before } = monthDateRange(month);
+
+  const categorySums = await repository.sumAmountsByCategory(userId, from, before);
+  const categories = await repository.findCategoryNames(
+    userId,
+    categorySums.map((row) => row.categoryId),
+  );
+
+  return toTransactionSummary({
+    month,
+    categorySums,
+    categoryNames: new Map(categories.map((category) => [category.id, category.name])),
+    typeFilter: query.type,
+  });
 }
 
 export async function updateTransaction(

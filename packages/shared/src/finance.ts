@@ -3,7 +3,7 @@ import { calendarDateSchema, moneySchema, monthSchema, paginationQuerySchema } f
 
 export const NOTE_MAX_LENGTH = 500;
 
-const positiveMoneySchema = moneySchema.refine(
+export const positiveMoneySchema = moneySchema.refine(
   (amount) => amount !== "0.00",
   "Amount must be greater than 0.",
 );
@@ -55,6 +55,28 @@ export const listTransactionsQuerySchema = paginationQuerySchema.extend({
 
 export type ListTransactionsQuery = z.output<typeof listTransactionsQuerySchema>;
 
+export const transactionSummaryQuerySchema = z.object({
+  month: monthSchema.optional(),
+  type: transactionTypeSchema.optional(),
+});
+
+export type TransactionSummaryQuery = z.output<typeof transactionSummaryQuerySchema>;
+
+export type CategoryTotal = {
+  categoryId: string;
+  name: string;
+  type: TransactionType;
+  total: string;
+};
+
+export type TransactionSummary = {
+  month: string;
+  totalIncome: string;
+  totalExpense: string;
+  net: string;
+  byCategory: CategoryTotal[];
+};
+
 export type Transaction = {
   id: string;
   type: TransactionType;
@@ -65,4 +87,43 @@ export type Transaction = {
   shoppingListId: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export const BUDGETS_MAX = 100;
+
+export const budgetsQuerySchema = z.object({ month: monthSchema.optional() });
+
+export type BudgetsQuery = z.output<typeof budgetsQuerySchema>;
+
+export const budgetEntrySchema = z.object({
+  categoryId: z.uuid("Choose a category."),
+  amount: positiveMoneySchema,
+});
+
+export const replaceBudgetsSchema = z.object({
+  budgets: z
+    .array(budgetEntrySchema)
+    .max(BUDGETS_MAX, `At most ${BUDGETS_MAX} budgets.`)
+    .refine(
+      (entries) => new Set(entries.map((entry) => entry.categoryId)).size === entries.length,
+      "Each category can have only one budget.",
+    ),
+});
+
+export type ReplaceBudgetsInput = z.input<typeof replaceBudgetsSchema>;
+export type ReplaceBudgetsValues = z.output<typeof replaceBudgetsSchema>;
+
+export type Budget = {
+  id: string;
+  category: Category;
+  amount: string;
+  spent: string;
+  remaining: string;
+};
+
+export type MonthlyBudgets = {
+  month: string;
+  totalBudget: string;
+  totalSpent: string;
+  data: Budget[];
 };

@@ -2,6 +2,7 @@ import {
   createTransactionSchema,
   listTransactionsQuerySchema,
   transactionParamsSchema,
+  transactionSummaryQuerySchema,
   updateTransactionSchema,
 } from "@keepitbalance/shared/finance";
 import { Router } from "express";
@@ -16,6 +17,14 @@ transactionRoutes.get(
   requireAuth,
   validate({ query: listTransactionsQuerySchema }),
   controller.listTransactions,
+);
+
+// Before any "/:id" route, so "summary" is never read as an id.
+transactionRoutes.get(
+  "/summary",
+  requireAuth,
+  validate({ query: transactionSummaryQuerySchema }),
+  controller.summarizeTransactions,
 );
 
 transactionRoutes.post(

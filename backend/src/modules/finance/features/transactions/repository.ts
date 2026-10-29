@@ -77,3 +77,20 @@ export function updateTransaction(
 export async function deleteTransaction(id: string, userId: string): Promise<void> {
   await prisma.transaction.delete({ where: { id, userId } });
 }
+
+export function sumAmountsByCategory(userId: string, dateFrom: Date, dateBefore: Date) {
+  return prisma.transaction.groupBy({
+    by: ["categoryId", "type"],
+    where: { userId, date: { gte: dateFrom, lt: dateBefore } },
+    _sum: { amount: true },
+  });
+}
+
+export type CategorySumRow = Awaited<ReturnType<typeof sumAmountsByCategory>>[number];
+
+export function findCategoryNames(userId: string, categoryIds: string[]) {
+  return prisma.category.findMany({
+    where: { userId, id: { in: categoryIds } },
+    select: { id: true, name: true },
+  });
+}

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createTransactionSchema, listTransactionsQuerySchema, transactionParamsSchema } from "./finance.ts";
+import {
+  budgetsQuerySchema,
+  createTransactionSchema,
+  replaceBudgetsSchema,
+  listTransactionsQuerySchema,
+  transactionParamsSchema,
+  transactionSummaryQuerySchema,
+} from "./finance.ts";
 
 const valid = {
   type: "income",
@@ -110,5 +117,56 @@ describe("transactionParamsSchema", () => {
       true,
     );
     expect(transactionParamsSchema.safeParse({ id: "abc" }).success).toBe(false);
+  });
+});
+
+describe("transactionSummaryQuerySchema", () => {
+  it("leaves month and type optional", () => {
+    expect(transactionSummaryQuerySchema.parse({})).toEqual({});
+    expect(transactionSummaryQuerySchema.parse({ month: "2026-09", type: "expense" })).toEqual({
+      month: "2026-09",
+      type: "expense",
+    });
+  });
+
+  it.each([{ month: "2026-13" }, { type: "savings" }])("rejects %o", (query) => {
+    expect(transactionSummaryQuerySchema.safeParse(query).success).toBe(false);
+  });
+});
+
+describe("replaceBudgetsSchema", () => {
+  const groceriesId = "123e4567-e89b-12d3-a456-426614174000";
+  const transportId = "123e4567-e89b-12d3-a456-426614174001";
+
+  it("normalizes amounts and keeps them otherwise as entered", () => {
+    expect(replaceBudgetsSchema.parse({ budgets: [{ categoryId: groceriesId, amount: "412.3" }] })).toEqual({
+      budgets: [{ categoryId: groceriesId, amount: "412.30" }],
+    });
+  });
+
+  it("accepts an empty list, which removes every budget", () => {
+    expect(replaceBudgetsSchema.parse({ budgets: [] })).toEqual({ budgets: [] });
+  });
+
+  it("rejects the same category twice", () => {
+    const result = replaceBudgetsSchema.safeParse({
+      budgets: [
+        { categoryId: groceriesId, amount: "100" },
+        { categoryId: groceriesId, amount: "200" },
+      ],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("Each category can have only one budget.");
+  });
+
+  it.each(["0", "-5", "12.345", "abc"])("rejects the amount %s", (amount) => {
+    expect(replaceBudgetsSchema.safeParse({ budgets: [{ categoryId: transportId, amount }] }).success).toBe(
+      false,
+    );
+  });
+
+  it("validates the month query", () => {
+    expect(budgetsQuerySchema.parse({})).toEqual({});
+    expect(budgetsQuerySchema.safeParse({ month: "2026-13" }).success).toBe(false);
   });
 });

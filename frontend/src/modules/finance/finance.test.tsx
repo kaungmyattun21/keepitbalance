@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Category, Transaction } from "@keepitbalance/shared/finance";
+import type { Budget, Category, MonthlyBudgets, Transaction } from "@keepitbalance/shared/finance";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,7 +13,7 @@ import { formatMonth } from "@/shared/lib/format";
 import { queryClient } from "@/shared/lib/query-client";
 import { createFetchMock, json } from "@/shared/test/fetch-mock";
 import { sessionFixture } from "@/shared/test/session-fixture";
-import { lazyFinancePage } from "./index.ts";
+import { financeRoute } from "./index.ts";
 
 const groceries: Category = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -31,15 +31,15 @@ const routes: RouteObject[] = [
   {
     path: "/",
     middleware: [requireSession],
-    children: [{ path: "finance", lazy: lazyFinancePage }],
+    children: [financeRoute],
   },
   { path: "/login", Component: () => <h1>Log in</h1> },
 ];
 
 const server = createFetchMock();
 
-function renderFinance() {
-  const router = createMemoryRouter(routes, { initialEntries: ["/finance"] });
+function renderFinance(path = "/finance/transactions") {
+  const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
@@ -78,6 +78,17 @@ function transactionFixture(overrides: Partial<Transaction> = {}): Transaction {
 }
 
 let storedTransactions: Transaction[];
+let storedBudgets: Budget[];
+
+function monthlyBudgetsResponse(month: string): MonthlyBudgets {
+  return { month, totalBudget: "0.00", totalSpent: "0.00", data: storedBudgets };
+}
+
+function budgetFixture(category: Category, amount: string, spent: string): Budget {
+  const remainingCents = Math.round((Number(amount) - Number(spent)) * 100);
+  const remaining = `${remainingCents < 0 ? "-" : ""}${(Math.abs(remainingCents) / 100).toFixed(2)}`;
+  return { id: `budget-${category.id}`, category, amount, spent, remaining };
+}
 
 const requestedMonths = () =>
   server.calls("GET /api/v1/transactions").map((request) => new URL(request.url).searchParams.get("month"));
@@ -91,6 +102,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   storedTransactions = [];
+  storedBudgets = [];
   vi.stubGlobal("fetch", server.fetch);
   server.on("GET /api/v1/auth/get-session", () => json(200, sessionFixture()));
   server.on("GET /api/v1/categories", () => json(200, { data: [salary, groceries, transport] }));
@@ -101,6 +113,18 @@ beforeEach(() => {
       pageSize: 20,
       total: storedTransactions.length,
       totalPages: 1,
+    }),
+  );
+  server.on("GET /api/v1/budgets", (request) =>
+    json(200, monthlyBudgetsResponse(new URL(request.url).searchParams.get("month") ?? thisMonth)),
+  );
+  server.on("GET /api/v1/transactions/summary", (request) =>
+    json(200, {
+      month: new URL(request.url).searchParams.get("month"),
+      totalIncome: "0.00",
+      totalExpense: "0.00",
+      net: "0.00",
+      byCategory: [],
     }),
   );
 });
@@ -312,5 +336,158 @@ describe("transaction list", () => {
     expect((dialog.getByLabelText("Category") as HTMLSelectElement).disabled).toBe(true);
     expect(dialog.getByText("Shopping expenses keep their type and category.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Delete Groceries/ })).toBeNull();
+  });
+});
+
+describe("finance sections", () => {
+  it("opens on the overview with this month's totals and category breakdown", async () => {
+    server.on("GET /api/v1/transactions/summary", () =>
+      json(200, {
+        month: thisMonth,
+        totalIncome: "3000.00",
+        totalExpense: "3250.50",
+        net: "-250.50",
+        byCategory: [
+          { categoryId: groceries.id, name: "Groceries", type: "expense", total: "3000.00" },
+          { categoryId: salary.id, name: "Salary", type: "income", total: "3000.00" },
+          { categoryId: transport.id, name: "Transport", type: "expense", total: "250.50" },
+        ],
+      }),
+    );
+    renderFinance("/finance");
+
+    expect(await screen.findByRole("heading", { name: `${formatMonth(thisMonth)} overview` })).toBeTruthy();
+    expect(screen.getByText("Net balance").nextElementSibling?.textContent).toBe("−250.50");
+    const spending = within(screen.getByRole("region", { name: "Spending by category" }));
+    expect(spending.getByText("Groceries")).toBeTruthy();
+    expect(spending.getByText("92%")).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "Income by category" })).getByText("Salary"),
+    ).toBeTruthy();
+    await waitFor(() => expect(document.title).toBe("Finance overview · KeepItBalance"));
+  });
+
+  it("switches sections with links that mark the current one", async () => {
+    renderFinance("/finance");
+    const sections = within(await screen.findByRole("navigation", { name: "Finance sections" }));
+    expect(sections.getByRole("link", { name: "Overview" }).getAttribute("aria-current")).toBe("page");
+
+    await userEvent.click(sections.getByRole("link", { name: "Bills" }));
+
+    expect(await screen.findByRole("heading", { name: "Bills" })).toBeTruthy();
+    expect(screen.getByText("Coming soon")).toBeTruthy();
+    expect(sections.getByRole("link", { name: "Bills" }).getAttribute("aria-current")).toBe("page");
+
+    await userEvent.click(sections.getByRole("link", { name: "Transactions" }));
+    expect(await screen.findByRole("region", { name: "Add transaction" })).toBeTruthy();
+  });
+});
+
+describe("budgets", () => {
+  const budgetForm = async () =>
+    within(await screen.findByRole("region", { name: "Set up your monthly budgets" }));
+
+  it("opens a setup form on the first visit, with expense categories only", async () => {
+    renderFinance("/finance/budgets");
+    const form = await budgetForm();
+
+    expect(form.getByRole("checkbox", { name: "Groceries" })).toBeTruthy();
+    expect(form.getByRole("checkbox", { name: "Transport" })).toBeTruthy();
+    expect(form.queryByRole("checkbox", { name: "Salary" })).toBeNull();
+    expect(form.getByText("No categories selected.")).toBeTruthy();
+  });
+
+  it("selects a category when its amount is typed, totals exactly, and saves as entered", async () => {
+    server.on("PUT /api/v1/budgets", async (request) => {
+      const { budgets } = (await request.json()) as { budgets: { categoryId: string; amount: string }[] };
+      storedBudgets = budgets.map((entry) =>
+        budgetFixture(entry.categoryId === groceries.id ? groceries : transport, entry.amount, "0.00"),
+      );
+      return json(200, monthlyBudgetsResponse(thisMonth));
+    });
+    renderFinance("/finance/budgets");
+    const form = await budgetForm();
+
+    await userEvent.type(form.getByLabelText("Monthly budget for Groceries"), "412.3");
+    await userEvent.type(form.getByLabelText("Monthly budget for Transport"), "0.2");
+
+    expect((form.getByRole("checkbox", { name: "Groceries" }) as HTMLInputElement).checked).toBe(true);
+    expect(form.getByText("412.50")).toBeTruthy();
+    await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
+
+    expect(await screen.findByText("Budgets saved.")).toBeTruthy();
+    const [request] = server.calls("PUT /api/v1/budgets");
+    expect(await request!.json()).toEqual({
+      budgets: [
+        { categoryId: groceries.id, amount: "412.30" },
+        { categoryId: transport.id, amount: "0.20" },
+      ],
+    });
+    expect(await screen.findByRole("region", { name: "Monthly budgets" })).toBeTruthy();
+  });
+
+  it("asks for an amount when a category is ticked without one", async () => {
+    renderFinance("/finance/budgets");
+    const form = await budgetForm();
+
+    await userEvent.click(form.getByRole("checkbox", { name: "Groceries" }));
+    await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
+
+    expect(await form.findByText("Enter an amount like 12.50.")).toBeTruthy();
+    expect(form.getByLabelText("Monthly budget for Groceries").getAttribute("aria-invalid")).toBe("true");
+    expect(server.calls("PUT /api/v1/budgets")).toHaveLength(0);
+  });
+
+  it("can be skipped, then set up from the empty state", async () => {
+    renderFinance("/finance/budgets");
+    const form = await budgetForm();
+
+    await userEvent.click(form.getByRole("button", { name: "Skip for now" }));
+    expect(await screen.findByRole("heading", { name: "No budgets yet" })).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Set up budgets" }));
+    expect(await budgetForm()).toBeTruthy();
+  });
+
+  it("shows spending against each budget and edits them with the same form", async () => {
+    storedBudgets = [
+      budgetFixture(groceries, "420.00", "389.80"),
+      budgetFixture(transport, "100.00", "112.50"),
+    ];
+    server.on("PUT /api/v1/budgets", async (request) => {
+      const { budgets } = (await request.json()) as { budgets: unknown[] };
+      storedBudgets = budgets.length === 0 ? [] : storedBudgets;
+      return json(200, monthlyBudgetsResponse(thisMonth));
+    });
+    renderFinance("/finance/budgets");
+
+    const list = within(await screen.findByRole("region", { name: "Monthly budgets" }));
+    expect(list.getByText("30.20 left (93% used)")).toBeTruthy();
+    expect(list.getByText("Over by 12.50 (113% used)")).toBeTruthy();
+
+    await userEvent.click(list.getByRole("button", { name: "Edit budgets" }));
+    const form = within(await screen.findByRole("region", { name: "Edit budgets" }));
+    expect((form.getByLabelText("Monthly budget for Groceries") as HTMLInputElement).value).toBe("420.00");
+    await userEvent.click(form.getByRole("checkbox", { name: "Groceries" }));
+    await userEvent.click(form.getByRole("checkbox", { name: "Transport" }));
+    await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
+
+    expect(await screen.findByText("Budgets removed.")).toBeTruthy();
+    expect(await budgetForm()).toBeTruthy();
+  });
+
+  it("highlights the most-used budgets on the overview", async () => {
+    storedBudgets = [
+      budgetFixture(groceries, "420.00", "389.80"),
+      budgetFixture(transport, "100.00", "112.50"),
+    ];
+    renderFinance("/finance");
+
+    const highlights = within(await screen.findByRole("region", { name: "Budgets" }));
+    const names = highlights.getAllByRole("listitem").map((item) => item.querySelector("span")?.textContent);
+    expect(names).toEqual(["Transport", "Groceries"]);
+    expect(highlights.getByRole("link", { name: "All budgets" }).getAttribute("href")).toBe(
+      `/finance/budgets?month=${thisMonth}`,
+    );
   });
 });

@@ -9,7 +9,7 @@ import { useTransactionListParams } from "../hooks/use-transaction-list-params.t
 import { useTransactions } from "../hooks/use-transactions.ts";
 import { DeleteTransactionDialog } from "./DeleteTransactionDialog.tsx";
 import { EditTransactionDialog } from "./EditTransactionDialog.tsx";
-import { MonthSwitcher } from "./MonthSwitcher.tsx";
+import { MonthSwitcher } from "../../../shared/components/MonthSwitcher.tsx";
 import { TransactionListItem } from "./TransactionListItem.tsx";
 
 export function TransactionList({ categories }: { categories: Category[] }) {

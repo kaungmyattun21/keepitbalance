@@ -2,6 +2,7 @@ import type {
   CreateTransactionValues,
   ListTransactionsQuery,
   TransactionParams,
+  TransactionSummaryQuery,
   UpdateTransactionValues,
 } from "@keepitbalance/shared/finance";
 import type { Request, Response } from "express";
@@ -20,6 +21,15 @@ export async function listTransactions(req: Request, res: Response) {
     req.query as unknown as ListTransactionsQuery,
   );
   res.json(transactionPage);
+}
+
+export async function summarizeTransactions(req: Request, res: Response) {
+  const summary = await service.summarizeTransactions(
+    getUserId(req),
+    getUserTimezone(req),
+    req.query as TransactionSummaryQuery,
+  );
+  res.json(summary);
 }
 
 export async function updateTransaction(req: Request, res: Response) {

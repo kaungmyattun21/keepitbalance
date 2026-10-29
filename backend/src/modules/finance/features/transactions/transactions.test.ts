@@ -392,3 +392,80 @@ describe("DELETE /api/v1/transactions/:id", () => {
     expect((await newAgent().delete(`/api/v1/transactions/${original.id}`)).status).toBe(401);
   });
 });
+
+describe("GET /api/v1/transactions/summary", () => {
+  it("totals income and expenses exactly and breaks them down by category, largest first", async () => {
+    await addTransaction(agent, { date: "2026-09-01", type: "income", amount: "3000" });
+    await addTransaction(agent, { date: "2026-09-05", amount: "0.10" });
+    await addTransaction(agent, { date: "2026-09-06", amount: "0.20" });
+    const transport = await categoryOf(testUser.email, "EXPENSE", "Transport");
+    await agent
+      .post("/api/v1/transactions")
+      .send({ type: "expense", amount: "45.5", date: "2026-09-07", categoryId: transport.id });
+
+    const response = await agent.get("/api/v1/transactions/summary?month=2026-09");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      month: "2026-09",
+      totalIncome: "3000.00",
+      totalExpense: "45.80",
+      net: "2954.20",
+      byCategory: [
+        { categoryId: expect.any(String), name: "Salary", type: "income", total: "3000.00" },
+        { categoryId: transport.id, name: "Transport", type: "expense", total: "45.50" },
+        { categoryId: expect.any(String), name: "Groceries", type: "expense", total: "0.30" },
+      ],
+    });
+  });
+
+  it("reports a negative net when spending is higher, and only counts the given month", async () => {
+    await addTransaction(agent, { date: "2026-09-30", type: "income", amount: "100" });
+    await addTransaction(agent, { date: "2026-09-01", amount: "250" });
+    await addTransaction(agent, { date: "2026-10-01", amount: "999" });
+
+    const response = await agent.get("/api/v1/transactions/summary?month=2026-09");
+
+    expect(response.body).toMatchObject({ totalIncome: "100.00", totalExpense: "250.00", net: "-150.00" });
+  });
+
+  it("filters the breakdown by type but keeps both totals", async () => {
+    await addTransaction(agent, { date: "2026-09-01", type: "income", amount: "100" });
+    await addTransaction(agent, { date: "2026-09-02", amount: "40" });
+
+    const response = await agent.get("/api/v1/transactions/summary?month=2026-09&type=expense");
+
+    expect(response.body.totalIncome).toBe("100.00");
+    expect(response.body.byCategory.map((category: { name: string }) => category.name)).toEqual([
+      "Groceries",
+    ]);
+  });
+
+  it("returns zeros for an empty month and defaults to the current month", async () => {
+    const response = await agent.get("/api/v1/transactions/summary");
+
+    expect(response.body).toEqual({
+      month: currentMonthIn(testUser.timezone),
+      totalIncome: "0.00",
+      totalExpense: "0.00",
+      net: "0.00",
+      byCategory: [],
+    });
+  });
+
+  it("never includes another user's transactions", async () => {
+    const otherAgent = newAgent();
+    await signUp(otherAgent, otherUser);
+    await addTransaction(otherAgent, { date: "2026-09-10", amount: "500" }, otherUser.email);
+    await addTransaction(agent, { date: "2026-09-10", amount: "5" });
+
+    const response = await agent.get("/api/v1/transactions/summary?month=2026-09");
+
+    expect(response.body.totalExpense).toBe("5.00");
+  });
+
+  it("validates the query and requires a session", async () => {
+    expect((await agent.get("/api/v1/transactions/summary?month=2026-13")).status).toBe(400);
+    expect((await newAgent().get("/api/v1/transactions/summary")).status).toBe(401);
+  });
+});

@@ -68,6 +68,7 @@ model User {
   accounts        Account[]
   categories      Category[]
   transactions    Transaction[]
+  budgets         Budget[]
   ingredients     Ingredient[]
   recipes         Recipe[]
   pantryItems     PantryItem[]
@@ -147,6 +148,7 @@ model Category {
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  budgets      Budget[]
 
   @@unique([userId, type, name]) // no duplicate names per user + type
   @@unique([id, userId, type]) // target of the composite FK on Transaction
@@ -172,6 +174,24 @@ model Transaction {
 
   @@index([userId, date])
   @@map("transactions")
+}
+
+// A monthly spending limit for one expense category (FR-15, D-027).
+model Budget {
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String          @map("user_id") @db.Uuid
+  categoryId String          @map("category_id") @db.Uuid
+  type       TransactionType @default(EXPENSE) // always EXPENSE (check constraint); part of the composite FK
+  amount     Decimal         @db.Decimal(12, 2) // per month, > 0
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Composite FK: the user's own category, and (with the check constraint) an expense one.
+  category Category @relation(fields: [categoryId, userId, type], references: [id, userId, type], onDelete: Restrict, map: "budgets_category_fkey")
+
+  @@unique([userId, categoryId])
+  @@map("budgets")
 }
 
 // ---------------------------------------------------------------------------
