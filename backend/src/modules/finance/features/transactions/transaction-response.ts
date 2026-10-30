@@ -10,7 +10,12 @@ export function toTransactionResponse(row: TransactionRow): Transaction {
     amount: row.amount.toFixed(2),
     date: fromDbDate(row.date),
     note: row.note,
-    category: { id: row.category.id, name: row.category.name, type: toApiType[row.category.type] },
+    category: {
+      groupId: row.category.groupId,
+      id: row.category.id,
+      name: row.category.name,
+      type: toApiType[row.category.type],
+    },
     shoppingListId: row.shoppingListId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

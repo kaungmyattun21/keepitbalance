@@ -4,8 +4,10 @@ import express, { json, Router, text } from "express";
 import helmet from "helmet";
 import { auth, authConfigRoutes, meRoutes, onUserCreated } from "./modules/auth/index.ts";
 import {
+  billRoutes,
   budgetRoutes,
   categoryRoutes,
+  categoryGroupRoutes,
   createDefaultCategories,
   transactionRoutes,
 } from "./modules/finance/index.ts";
@@ -47,7 +49,9 @@ api.get("/health", async (_req, res) => {
 api.use("/auth-config", authConfigRoutes);
 api.use("/me", meRoutes);
 api.use("/budgets", budgetRoutes);
+api.use("/bills", billRoutes);
 api.use("/categories", categoryRoutes);
+api.use("/category-groups", categoryGroupRoutes);
 api.use("/transactions", transactionRoutes);
 
 app.use("/api/v1", api);

@@ -12,6 +12,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { ApiError } from "@/shared/lib/api";
 import { formatMoney } from "@/shared/lib/format";
+import { useCategoryGroups } from "../../../shared/hooks/use-category-groups.ts";
 import { financeKeys } from "../../../shared/query-keys.ts";
 import type { TransactionFormField, TransactionFormOptions } from "../types.ts";
 import { useCreateTransaction } from "./use-create-transaction.ts";
@@ -52,10 +53,15 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
     defaultValues: transaction ? formValuesOf(transaction) : emptyFormValues(today),
   });
 
+  const groups = useCategoryGroups();
   const selectedType = useWatch({ control: form.control, name: "type" });
   const categoryOptions = categories
     .filter((category) => category.type === selectedType)
-    .map((category) => ({ value: category.id, label: category.name }));
+    .map((category) => ({
+      value: category.id,
+      label: category.name,
+      group: groups.find((group) => group.id === category.groupId)?.name,
+    }));
 
   function changeType(nextType: TransactionType) {
     form.setValue("type", nextType);

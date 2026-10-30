@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  createBillSchema,
+  updateBillSchema,
+  payBillSchema,
+  createCategorySchema,
+  createCategoryGroupSchema,
+  updateCategorySchema,
   budgetsQuerySchema,
   createTransactionSchema,
   replaceBudgetsSchema,
@@ -168,5 +174,62 @@ describe("replaceBudgetsSchema", () => {
   it("validates the month query", () => {
     expect(budgetsQuerySchema.parse({})).toEqual({});
     expect(budgetsQuerySchema.safeParse({ month: "2026-13" }).success).toBe(false);
+  });
+});
+
+describe("category management validation", () => {
+  it("requires a valid group when creating a category", () => {
+    expect(createCategorySchema.safeParse({ name: "Groceries" }).success).toBe(false);
+    expect(createCategorySchema.safeParse({ name: "Groceries", groupId: null }).success).toBe(false);
+    expect(createCategorySchema.parse({ name: " Groceries ", groupId: valid.categoryId })).toEqual({
+      name: "Groceries",
+      groupId: valid.categoryId,
+    });
+  });
+  it("rejects empty and overlong names and empty updates", () => {
+    for (const name of ["  ", "a".repeat(101)]) {
+      expect(createCategoryGroupSchema.safeParse({ name, type: "expense" }).success).toBe(false);
+    }
+    expect(updateCategorySchema.safeParse({}).success).toBe(false);
+    expect(updateCategorySchema.safeParse({ groupId: null }).success).toBe(false);
+    expect(updateCategorySchema.safeParse({ groupId: valid.categoryId }).success).toBe(true);
+  });
+});
+
+describe("bill schemas", () => {
+  const bill = {
+    name: " Rent ",
+    amount: "1200.5",
+    categoryId: valid.categoryId,
+    nextDueDate: "2026-01-31",
+    frequency: "monthly",
+  };
+  it("normalizes names and amounts and accepts supported schedules", () => {
+    expect(createBillSchema.parse(bill)).toMatchObject({ name: "Rent", amount: "1200.50" });
+    for (const frequency of ["weekly", "monthly", "yearly"])
+      expect(createBillSchema.safeParse({ ...bill, frequency }).success).toBe(true);
+  });
+  it("requires valid expense amounts, dates, category ids and a name", () => {
+    for (const override of [
+      { amount: "0" },
+      { amount: "1.234" },
+      { name: " " },
+      { categoryId: "unknown" },
+      { nextDueDate: "2026-02-30" },
+      { frequency: "daily" },
+    ])
+      expect(createBillSchema.safeParse({ ...bill, ...override }).success).toBe(false);
+  });
+  it("requires an occurrence and version for payments and a version for edits", () => {
+    expect(updateBillSchema.safeParse(bill).success).toBe(false);
+    expect(payBillSchema.safeParse({ amount: "10", date: "2026-02-01" }).success).toBe(false);
+    expect(
+      payBillSchema.parse({
+        amount: "10",
+        date: "2026-02-01",
+        dueDate: "2026-01-31",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }).amount,
+    ).toBe("10.00");
   });
 });

@@ -37,7 +37,7 @@ describe("GET /api/v1/budgets", () => {
       month: currentMonthIn(testUser.timezone),
       totalBudget: "0.00",
       totalSpent: "0.00",
-      data: [],
+      groups: [],
     });
   });
 
@@ -59,22 +59,57 @@ describe("GET /api/v1/budgets", () => {
     const body = response.body as MonthlyBudgets;
 
     expect(body).toMatchObject({ month: "2026-09", totalBudget: "520.00", totalSpent: "502.30" });
-    expect(body.data).toEqual([
+    expect(body.groups).toMatchObject([
+      { group: { name: "Essentials" }, amount: "420.00", spent: "389.80", remaining: "30.20" },
+      { group: { name: "Lifestyle" }, amount: "100.00", spent: "112.50", remaining: "-12.50" },
+    ]);
+    expect(
+      body.groups
+        .flatMap((group) => group.budgets)
+        .sort((a, b) => a.category.name.localeCompare(b.category.name)),
+    ).toEqual([
       {
         id: expect.any(String),
-        category: { id: eatingOut.id, name: "Eating out", type: "expense" },
+        category: { groupId: eatingOut.groupId, id: eatingOut.id, name: "Eating out", type: "expense" },
         amount: "100.00",
         spent: "112.50",
         remaining: "-12.50",
       },
       {
         id: expect.any(String),
-        category: { id: groceries.id, name: "Groceries", type: "expense" },
+        category: { groupId: groceries.groupId, id: groceries.id, name: "Groceries", type: "expense" },
         amount: "420.00",
         spent: "389.80",
         remaining: "30.20",
       },
     ]);
+  });
+
+  it("sums multiple category budgets within a group using exact decimals", async () => {
+    const groceries = await categoryOf(testUser.email, "EXPENSE", "Groceries");
+    const transport = await categoryOf(testUser.email, "EXPENSE", "Transport");
+    await saveBudgets(agent, [
+      { categoryId: groceries.id, amount: "0.10" },
+      { categoryId: transport.id, amount: "0.20" },
+    ]);
+    await spend(agent, groceries.id, "0.15", "2026-09-01");
+    const response = await agent.get("/api/v1/budgets?month=2026-09");
+    expect(response.body).toMatchObject({
+      totalBudget: "0.30",
+      totalSpent: "0.15",
+      groups: [
+        {
+          group: { name: "Essentials" },
+          amount: "0.30",
+          spent: "0.15",
+          remaining: "0.15",
+          budgets: [
+            { category: { id: groceries.id }, remaining: "-0.05" },
+            { category: { id: transport.id }, remaining: "0.20" },
+          ],
+        },
+      ],
+    });
   });
 
   it("never shows another user's budgets", async () => {
@@ -85,7 +120,7 @@ describe("GET /api/v1/budgets", () => {
 
     const response = await agent.get("/api/v1/budgets");
 
-    expect(response.body.data).toEqual([]);
+    expect((response.body as MonthlyBudgets).groups.flatMap((group) => group.budgets)).toEqual([]);
   });
 
   it("validates the month and requires a session", async () => {
@@ -102,7 +137,9 @@ describe("PUT /api/v1/budgets", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.month).toBe(currentMonthIn(testUser.timezone));
-    expect(response.body.data).toEqual([expect.objectContaining({ amount: "412.30", spent: "0.00" })]);
+    expect((response.body as MonthlyBudgets).groups.flatMap((group) => group.budgets)).toEqual([
+      expect.objectContaining({ amount: "412.30", spent: "0.00" }),
+    ]);
   });
 
   it("replaces the whole set: updates kept categories and removes left-out ones", async () => {
@@ -112,13 +149,13 @@ describe("PUT /api/v1/budgets", () => {
       { categoryId: groceries.id, amount: "400" },
       { categoryId: transport.id, amount: "80" },
     ]);
-    const groceriesBudgetId = (first.body as MonthlyBudgets).data.find(
-      (budget) => budget.category.id === groceries.id,
-    )?.id;
+    const groceriesBudgetId = (first.body as MonthlyBudgets).groups
+      .flatMap((group) => group.budgets)
+      .find((budget) => budget.category.id === groceries.id)?.id;
 
     const second = await saveBudgets(agent, [{ categoryId: groceries.id, amount: "450" }]);
 
-    expect((second.body as MonthlyBudgets).data).toEqual([
+    expect((second.body as MonthlyBudgets).groups.flatMap((group) => group.budgets)).toEqual([
       expect.objectContaining({ id: groceriesBudgetId, amount: "450.00" }),
     ]);
     expect(await prisma.budget.count()).toBe(1);
@@ -130,7 +167,7 @@ describe("PUT /api/v1/budgets", () => {
 
     const response = await saveBudgets(agent, []);
 
-    expect(response.body.data).toEqual([]);
+    expect((response.body as MonthlyBudgets).groups.flatMap((group) => group.budgets)).toEqual([]);
     expect(await prisma.budget.count()).toBe(0);
   });
 

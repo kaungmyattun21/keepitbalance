@@ -161,6 +161,14 @@
   }
 }
 
+/* The root already reserves scrollbar space. Radix scroll locks must not add
+   another gutter when a dialog, sheet or select opens. Keep its overflow lock. */
+@supports (scrollbar-gutter: stable) {
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

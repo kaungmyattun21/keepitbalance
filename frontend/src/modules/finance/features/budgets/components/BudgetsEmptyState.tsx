@@ -1,7 +1,8 @@
+import { SheetTrigger } from "@/shared/components/ui/sheet";
 import { PiggyBank } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 
-export function BudgetsEmptyState({ onSetUp }: { onSetUp: () => void }) {
+export function BudgetsEmptyState() {
   return (
     <section
       aria-labelledby="budgets-empty-heading"
@@ -18,7 +19,9 @@ export function BudgetsEmptyState({ onSetUp }: { onSetUp: () => void }) {
           Set a monthly limit for the categories you want to keep an eye on.
         </p>
       </div>
-      <Button onClick={onSetUp}>Set up budgets</Button>
+      <SheetTrigger asChild>
+        <Button>Set up budgets</Button>
+      </SheetTrigger>
     </section>
   );
 }

@@ -10,5 +10,15 @@ describe("createDefaultCategories", () => {
     await createDefaultCategories(user.id);
 
     expect(await prisma.category.count({ where: { userId: user.id } })).toBe(8);
+    expect(await prisma.categoryGroup.count({ where: { userId: user.id } })).toBe(3);
+    const categories = await prisma.category.findMany({
+      where: { userId: user.id },
+      include: { group: true },
+    });
+    expect(
+      categories.every(
+        (category) => category.group.userId === user.id && category.group.type === category.type,
+      ),
+    ).toBe(true);
   });
 });

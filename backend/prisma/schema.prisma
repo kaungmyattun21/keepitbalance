@@ -30,6 +30,14 @@ enum TransactionType {
   @@map("transaction_type")
 }
 
+enum BillFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+
+  @@map("bill_frequency")
+}
+
 enum MealSlot {
   BREAKFAST
   LUNCH
@@ -66,9 +74,11 @@ model User {
 
   sessions        Session[]
   accounts        Account[]
+  categoryGroups  CategoryGroup[]
   categories      Category[]
   transactions    Transaction[]
   budgets         Budget[]
+  bills           Bill[]
   ingredients     Ingredient[]
   recipes         Recipe[]
   pantryItems     PantryItem[]
@@ -138,7 +148,8 @@ model Verification {
 // Finance
 // ---------------------------------------------------------------------------
 
-model Category {
+// Groups only organise categories; transactions and budgets always point to a category (D-028).
+model CategoryGroup {
   id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId    String          @map("user_id") @db.Uuid
   type      TransactionType
@@ -146,12 +157,33 @@ model Category {
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories Category[]
+
+  @@unique([userId, type, name]) // no duplicate group names per user + type
+  @@unique([id, userId, type]) // target of the composite FK on Category
+  @@map("category_groups")
+}
+
+model Category {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  groupId   String          @map("group_id") @db.Uuid
+  type      TransactionType
+  name      String
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Composite FK: the group must belong to the SAME user and have the SAME type.
+  group        CategoryGroup @relation(fields: [groupId, userId, type], references: [id, userId, type], onDelete: Restrict, map: "categories_group_fkey")
   transactions Transaction[]
   budgets      Budget[]
+  bills        Bill[]
 
   @@unique([userId, type, name]) // no duplicate names per user + type
   @@unique([id, userId, type]) // target of the composite FK on Transaction
+  @@index([groupId])
   @@map("categories")
 }
 
@@ -192,6 +224,29 @@ model Budget {
 
   @@unique([userId, categoryId])
   @@map("budgets")
+}
+
+// A repeating expense reminder. Payment creates an ordinary transaction and advances one occurrence.
+model Bill {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String          @map("user_id") @db.Uuid
+  categoryId       String          @map("category_id") @db.Uuid
+  type             TransactionType @default(EXPENSE)
+  name             String
+  amount           Decimal         @db.Decimal(12, 2)
+  frequency        BillFrequency
+  recurrenceAnchor DateTime        @map("recurrence_anchor") @db.Date
+  nextDueDate      DateTime        @map("next_due_date") @db.Date
+  lastPaidDate     DateTime?       @map("last_paid_date") @db.Date
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId, userId, type], references: [id, userId, type], onDelete: Restrict, map: "bills_category_fkey")
+
+  @@index([userId, nextDueDate])
+  @@index([categoryId, userId, type])
+  @@map("bills")
 }
 
 // ---------------------------------------------------------------------------

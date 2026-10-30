@@ -13,7 +13,8 @@ function shareUsed(spent: string, amount: string): number {
 
 export function BudgetHighlights({ monthlyBudgets }: { monthlyBudgets: MonthlyBudgets }) {
   const budgetsLink = `/finance/budgets?month=${monthlyBudgets.month}`;
-  const mostUsed = [...monthlyBudgets.data]
+  const mostUsed = monthlyBudgets.groups
+    .flatMap((group) => group.budgets)
     .sort((left, right) => shareUsed(right.spent, right.amount) - shareUsed(left.spent, left.amount))
     .slice(0, HIGHLIGHT_COUNT);
 

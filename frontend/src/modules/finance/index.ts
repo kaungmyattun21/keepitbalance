@@ -25,9 +25,20 @@ export async function lazyBudgetsPage() {
   return { Component: BudgetsPage, loader: budgetsPageLoader };
 }
 
+export async function lazyCategoriesPage() {
+  const [{ CategoriesPage }, { categoriesPageLoader }] = await Promise.all([
+    import("./features/categories/CategoriesPage.tsx"),
+    import("./features/categories/categories-page-loader.ts"),
+  ]);
+  return { Component: CategoriesPage, loader: categoriesPageLoader };
+}
+
 export async function lazyBillsPage() {
-  const { BillsPage } = await import("./features/bills/BillsPage.tsx");
-  return { Component: BillsPage };
+  const [{ BillsPage }, { billsPageLoader }] = await Promise.all([
+    import("./features/bills/BillsPage.tsx"),
+    import("./features/bills/bills-page-loader.ts"),
+  ]);
+  return { Component: BillsPage, loader: billsPageLoader };
 }
 
 export const financeRoute: RouteObject = {
@@ -36,6 +47,7 @@ export const financeRoute: RouteObject = {
   children: [
     { index: true, lazy: lazyFinanceOverviewPage },
     { path: "transactions", lazy: lazyTransactionsPage },
+    { path: "categories", lazy: lazyCategoriesPage },
     { path: "budgets", lazy: lazyBudgetsPage },
     { path: "bills", lazy: lazyBillsPage },
   ],

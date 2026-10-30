@@ -1,6 +1,4 @@
-import type { Budget, Category } from "@keepitbalance/shared/finance";
-
-export type BudgetsView = "default" | "editing" | "skipped";
+import type { Budget, CategoryGroup } from "@keepitbalance/shared/finance";
 
 export type BudgetFormRow = {
   categoryId: string;
@@ -12,7 +10,7 @@ export type BudgetFormRow = {
 export type BudgetFormValues = { rows: BudgetFormRow[] };
 
 export type BudgetFormOptions = {
-  expenseCategories: Category[];
+  expenseGroups: CategoryGroup[];
   budgets: Budget[];
   onSaved: () => void;
 };

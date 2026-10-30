@@ -10,7 +10,7 @@ const transactionSelect = {
   shoppingListId: true,
   createdAt: true,
   updatedAt: true,
-  category: { select: { id: true, name: true, type: true } },
+  category: { select: { id: true, name: true, type: true, groupId: true } },
 } satisfies Prisma.TransactionSelect;
 
 export type TransactionRow = Prisma.TransactionGetPayload<{ select: typeof transactionSelect }>;

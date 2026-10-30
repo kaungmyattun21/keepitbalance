@@ -4,7 +4,9 @@ import { prisma } from "../../../../shared/db.ts";
 const budgetSelect = {
   id: true,
   amount: true,
-  category: { select: { id: true, name: true, type: true } },
+  category: {
+    select: { id: true, name: true, type: true, groupId: true, group: { select: { id: true, name: true } } },
+  },
 } satisfies Prisma.BudgetSelect;
 
 export type BudgetRow = Prisma.BudgetGetPayload<{ select: typeof budgetSelect }>;

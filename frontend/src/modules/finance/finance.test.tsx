@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { Budget, Category, MonthlyBudgets, Transaction } from "@keepitbalance/shared/finance";
+import type { Bill, Budget, Category, MonthlyBudgets, Transaction } from "@keepitbalance/shared/finance";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,19 +13,26 @@ import { formatMonth } from "@/shared/lib/format";
 import { queryClient } from "@/shared/lib/query-client";
 import { createFetchMock, json } from "@/shared/test/fetch-mock";
 import { sessionFixture } from "@/shared/test/session-fixture";
-import { financeRoute } from "./index.ts";
+import { financeRoute, lazyTransactionsPage } from "./index.ts";
 
 const groceries: Category = {
   id: "11111111-1111-4111-8111-111111111111",
+  groupId: "44444444-4444-4444-8444-444444444444",
   name: "Groceries",
   type: "expense",
 };
 const transport: Category = {
   id: "22222222-2222-4222-8222-222222222222",
+  groupId: "44444444-4444-4444-8444-444444444444",
   name: "Transport",
   type: "expense",
 };
-const salary: Category = { id: "33333333-3333-4333-8333-333333333333", name: "Salary", type: "income" };
+const salary: Category = {
+  id: "33333333-3333-4333-8333-333333333333",
+  name: "Salary",
+  type: "income",
+  groupId: "55555555-5555-4555-8555-555555555555",
+};
 
 const routes: RouteObject[] = [
   {
@@ -50,15 +57,22 @@ function renderFinance(path = "/finance/transactions") {
 
 async function fillValidExpense() {
   await userEvent.type(await screen.findByLabelText("Amount"), "42.5");
-  await userEvent.selectOptions(screen.getByLabelText("Category"), "Groceries");
+  await chooseOption(screen.getByLabelText("Category"), "Groceries");
 }
 
 const submit = () => userEvent.click(screen.getByRole("button", { name: "Add transaction" }));
 
-const optionNames = () =>
-  Array.from((screen.getByLabelText("Category") as HTMLSelectElement).options)
-    .filter((option) => !option.disabled)
-    .map((option) => option.text);
+async function chooseOption(trigger: HTMLElement, label: string) {
+  await userEvent.click(trigger);
+  await userEvent.click(await screen.findByRole("option", { name: label }));
+}
+
+async function optionNames() {
+  await userEvent.click(screen.getByLabelText("Category"));
+  const names = screen.getAllByRole("option").map((option) => option.textContent);
+  await userEvent.keyboard("{Escape}");
+  return names;
+}
 
 const thisMonth = currentMonthIn("Asia/Yangon");
 
@@ -81,7 +95,22 @@ let storedTransactions: Transaction[];
 let storedBudgets: Budget[];
 
 function monthlyBudgetsResponse(month: string): MonthlyBudgets {
-  return { month, totalBudget: "0.00", totalSpent: "0.00", data: storedBudgets };
+  return {
+    month,
+    totalBudget: "0.00",
+    totalSpent: "0.00",
+    groups: storedBudgets.length
+      ? [
+          {
+            group: { id: groceries.groupId, name: "Essentials" },
+            amount: "0.00",
+            spent: "0.00",
+            remaining: "0.00",
+            budgets: storedBudgets,
+          },
+        ]
+      : [],
+  };
 }
 
 function budgetFixture(category: Category, amount: string, spent: string): Budget {
@@ -93,7 +122,9 @@ function budgetFixture(category: Category, amount: string, spent: string): Budge
 const requestedMonths = () =>
   server.calls("GET /api/v1/transactions").map((request) => new URL(request.url).searchParams.get("month"));
 
-beforeAll(() => {
+beforeAll(async () => {
+  // Load route code before interaction tests so module transformation is outside DOM wait timeouts.
+  await lazyTransactionsPage();
   // Radix dialogs rely on browser APIs jsdom doesn't implement.
   Element.prototype.scrollIntoView = vi.fn();
   Element.prototype.hasPointerCapture = vi.fn(() => false);
@@ -105,6 +136,15 @@ beforeEach(() => {
   storedBudgets = [];
   vi.stubGlobal("fetch", server.fetch);
   server.on("GET /api/v1/auth/get-session", () => json(200, sessionFixture()));
+  server.on("GET /api/v1/category-groups", () =>
+    json(200, {
+      data: [
+        { id: groceries.groupId, name: "Essentials", type: "expense", categories: [groceries, transport] },
+        { id: salary.groupId, name: "Income", type: "income", categories: [salary] },
+      ],
+    }),
+  );
+  server.on("GET /api/v1/bills", () => json(200, { data: [] }));
   server.on("GET /api/v1/categories", () => json(200, { data: [salary, groceries, transport] }));
   server.on("GET /api/v1/transactions", () =>
     json(200, {
@@ -141,13 +181,13 @@ describe("add transaction form", () => {
     renderFinance();
     await screen.findByLabelText("Category");
 
-    expect(optionNames()).toEqual(["Groceries", "Transport"]);
-    await userEvent.selectOptions(screen.getByLabelText("Category"), "Groceries");
+    expect(await optionNames()).toEqual(["Groceries", "Transport"]);
+    await chooseOption(screen.getByLabelText("Category"), "Groceries");
 
     await userEvent.click(screen.getByRole("radio", { name: "Income" }));
 
-    expect(optionNames()).toEqual(["Salary"]);
-    expect((screen.getByLabelText("Category") as HTMLSelectElement).value).toBe("");
+    expect(await optionNames()).toEqual(["Salary"]);
+    expect(screen.getByLabelText("Category").textContent).toBe("Choose a category");
   });
 
   it("defaults the date to today in the user's timezone", async () => {
@@ -196,7 +236,7 @@ describe("add transaction form", () => {
       note: "Weekly shop",
     });
     expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText("Category") as HTMLSelectElement).value).toBe(groceries.id);
+    expect(screen.getByLabelText("Category").textContent).toBe("Groceries");
   });
 
   it("shows the server's validation messages next to the fields", async () => {
@@ -333,7 +373,7 @@ describe("transaction list", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^Edit Groceries/ }));
     const dialog = within(await screen.findByRole("dialog", { name: "Edit transaction" }));
 
-    expect((dialog.getByLabelText("Category") as HTMLSelectElement).disabled).toBe(true);
+    expect((dialog.getByLabelText("Category") as HTMLButtonElement).disabled).toBe(true);
     expect(dialog.getByText("Shopping expenses keep their type and category.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Delete Groceries/ })).toBeNull();
   });
@@ -374,8 +414,8 @@ describe("finance sections", () => {
 
     await userEvent.click(sections.getByRole("link", { name: "Bills" }));
 
-    expect(await screen.findByRole("heading", { name: "Bills" })).toBeTruthy();
-    expect(screen.getByText("Coming soon")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Recurring bills" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "No bills yet" })).toBeTruthy();
     expect(sections.getByRole("link", { name: "Bills" }).getAttribute("aria-current")).toBe("page");
 
     await userEvent.click(sections.getByRole("link", { name: "Transactions" }));
@@ -385,7 +425,7 @@ describe("finance sections", () => {
 
 describe("budgets", () => {
   const budgetForm = async () =>
-    within(await screen.findByRole("region", { name: "Set up your monthly budgets" }));
+    within(await screen.findByRole("dialog", { name: "Set up your monthly budgets" }));
 
   it("opens a setup form on the first visit, with expense categories only", async () => {
     renderFinance("/finance/budgets");
@@ -412,7 +452,7 @@ describe("budgets", () => {
     await userEvent.type(form.getByLabelText("Monthly budget for Transport"), "0.2");
 
     expect((form.getByRole("checkbox", { name: "Groceries" }) as HTMLInputElement).checked).toBe(true);
-    expect(form.getByText("412.50")).toBeTruthy();
+    expect(form.getAllByText("412.50")).toHaveLength(2);
     await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
 
     expect(await screen.findByText("Budgets saved.")).toBeTruthy();
@@ -465,15 +505,105 @@ describe("budgets", () => {
     expect(list.getByText("30.20 left (93% used)")).toBeTruthy();
     expect(list.getByText("Over by 12.50 (113% used)")).toBeTruthy();
 
-    await userEvent.click(list.getByRole("button", { name: "Edit budgets" }));
-    const form = within(await screen.findByRole("region", { name: "Edit budgets" }));
+    await userEvent.click(list.getByRole("button", { name: "Manage budgets" }));
+    const form = within(await screen.findByRole("dialog", { name: "Manage budgets" }));
     expect((form.getByLabelText("Monthly budget for Groceries") as HTMLInputElement).value).toBe("420.00");
     await userEvent.click(form.getByRole("checkbox", { name: "Groceries" }));
     await userEvent.click(form.getByRole("checkbox", { name: "Transport" }));
     await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
 
     expect(await screen.findByText("Budgets removed.")).toBeTruthy();
-    expect(await budgetForm()).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "No budgets yet" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("removes a cleared budget after validation while keeping other amounts", async () => {
+    storedBudgets = [
+      budgetFixture(groceries, "420.00", "20.00"),
+      budgetFixture(transport, "100.00", "10.00"),
+    ];
+    server.on("PUT /api/v1/budgets", async (request) => {
+      const { budgets } = (await request.json()) as { budgets: { categoryId: string; amount: string }[] };
+      storedBudgets = budgets.map((entry) =>
+        budgetFixture(entry.categoryId === groceries.id ? groceries : transport, entry.amount, "0.00"),
+      );
+      return json(200, monthlyBudgetsResponse(thisMonth));
+    });
+    renderFinance("/finance/budgets");
+    await userEvent.click(await screen.findByRole("button", { name: "Manage budgets" }));
+    const form = within(await screen.findByRole("dialog", { name: "Manage budgets" }));
+    const amount = form.getByLabelText("Monthly budget for Groceries");
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "0");
+    await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
+    expect(await form.findByText("Amount must be greater than 0.")).toBeTruthy();
+    await userEvent.clear(amount);
+    expect((form.getByRole("checkbox", { name: "Groceries" }) as HTMLInputElement).checked).toBe(false);
+    expect(form.queryByText("Amount must be greater than 0.")).toBeNull();
+    await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(await server.calls("PUT /api/v1/budgets")[0]!.json()).toEqual({
+      budgets: [{ categoryId: transport.id, amount: "100.00" }],
+    });
+    expect(
+      within(screen.getByRole("region", { name: "Monthly budgets" })).queryByText("Groceries"),
+    ).toBeNull();
+  });
+
+  it.each(["clear fields", "clear all button"])(
+    "starts over after saving empty amounts using %s",
+    async (method) => {
+      storedBudgets = [
+        budgetFixture(groceries, "420.00", "20.00"),
+        budgetFixture(transport, "100.00", "10.00"),
+      ];
+      server.on("PUT /api/v1/budgets", () => {
+        storedBudgets = [];
+        return json(200, monthlyBudgetsResponse(thisMonth));
+      });
+      renderFinance("/finance/budgets");
+      await userEvent.click(await screen.findByRole("button", { name: "Manage budgets" }));
+      const form = within(await screen.findByRole("dialog", { name: "Manage budgets" }));
+      if (method === "clear fields") {
+        await userEvent.clear(form.getByLabelText("Monthly budget for Groceries"));
+        await userEvent.clear(form.getByLabelText("Monthly budget for Transport"));
+      } else {
+        await userEvent.click(form.getByRole("button", { name: "Clear all amounts" }));
+      }
+      expect(form.getByText("No categories selected.")).toBeTruthy();
+      expect((form.getByLabelText("Monthly budget for Groceries") as HTMLInputElement).value).toBe("");
+      expect((form.getByLabelText("Monthly budget for Transport") as HTMLInputElement).value).toBe("");
+      expect(server.calls("PUT /api/v1/budgets")).toHaveLength(0);
+      await userEvent.click(form.getByRole("button", { name: "Save budgets" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(await server.calls("PUT /api/v1/budgets")[0]!.json()).toEqual({ budgets: [] });
+      expect(await screen.findByRole("heading", { name: "No budgets yet" })).toBeTruthy();
+      await userEvent.click(screen.getByRole("button", { name: "Set up budgets" }));
+      const setup = await budgetForm();
+      expect((setup.getByLabelText("Monthly budget for Groceries") as HTMLInputElement).value).toBe("");
+    },
+  );
+
+  it("dismisses the drawer with Escape, restores focus, and discards unsaved changes", async () => {
+    storedBudgets = [budgetFixture(groceries, "420.00", "20.00")];
+    renderFinance("/finance/budgets");
+    const trigger = await screen.findByRole("button", { name: "Manage budgets" });
+    await userEvent.click(trigger);
+    let drawer = within(await screen.findByRole("dialog", { name: "Manage budgets" }));
+    const amount = drawer.getByLabelText("Monthly budget for Groceries");
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "999");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+    expect(server.calls("PUT /api/v1/budgets")).toHaveLength(0);
+
+    await userEvent.click(trigger);
+    drawer = within(await screen.findByRole("dialog", { name: "Manage budgets" }));
+    expect((drawer.getByLabelText("Monthly budget for Groceries") as HTMLInputElement).value).toBe("420.00");
+    await userEvent.click(drawer.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(trigger);
   });
 
   it("highlights the most-used budgets on the overview", async () => {
@@ -489,5 +619,278 @@ describe("budgets", () => {
     expect(highlights.getByRole("link", { name: "All budgets" }).getAttribute("href")).toBe(
       `/finance/budgets?month=${thisMonth}`,
     );
+  });
+});
+
+describe("category management", () => {
+  it("groups transaction choices and links to category management", async () => {
+    renderFinance();
+    const select = await screen.findByLabelText("Category");
+    await userEvent.click(select);
+    const group = screen.getByRole("group", { name: "Essentials" });
+    expect(
+      within(group)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Groceries", "Transport"]);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("link", { name: "Manage categories" }));
+    const essentials = within(await screen.findByRole("region", { name: "Essentials" }));
+    expect(essentials.getByText("Groceries")).toBeTruthy();
+    expect((essentials.getByRole("button", { name: "Delete group" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await userEvent.click(screen.getByRole("link", { name: "Back to transactions" }));
+    expect(await screen.findByRole("region", { name: "Add transaction" })).toBeTruthy();
+  });
+
+  it("returns to the selected budget month from category management", async () => {
+    storedBudgets = [budgetFixture(groceries, "420.00", "20.00")];
+    renderFinance("/finance/budgets?month=2026-09");
+    await userEvent.click(await screen.findByRole("link", { name: "Manage categories" }));
+    const back = await screen.findByRole("link", { name: "Back to budgets" });
+    expect(back.getAttribute("href")).toBe("/finance/budgets?month=2026-09");
+    await userEvent.click(back);
+    expect(await screen.findByRole("region", { name: "Monthly budgets" })).toBeTruthy();
+    expect(screen.getByText(formatMonth("2026-09"))).toBeTruthy();
+  });
+
+  it("creates a group through the shared validated form and refreshes the hierarchy", async () => {
+    server.on("POST /api/v1/category-groups", async (request) => {
+      const input = await request.json();
+      server.on("GET /api/v1/category-groups", () =>
+        json(200, {
+          data: [
+            { id: "66666666-6666-4666-8666-666666666666", name: "Travel", type: "expense", categories: [] },
+          ],
+        }),
+      );
+      return json(201, input);
+    });
+    renderFinance("/finance/categories");
+    await userEvent.click(await screen.findByRole("button", { name: "Add group" }));
+    await userEvent.type(screen.getByLabelText("Group name"), " Travel ");
+    await userEvent.click(screen.getByRole("button", { name: "Save group" }));
+    expect(await screen.findByRole("region", { name: "Travel" })).toBeTruthy();
+    expect(await server.calls("POST /api/v1/category-groups")[0]!.json()).toEqual({
+      name: "Travel",
+      type: "expense",
+    });
+    expect(screen.queryByLabelText("Group name")).toBeNull();
+  });
+
+  it("moves a category using only groups of its type and invalidates budgets", async () => {
+    const destinationId = "66666666-6666-4666-8666-666666666666";
+    let moved = false;
+    server.on("GET /api/v1/category-groups", () =>
+      json(200, {
+        data: [
+          {
+            id: groceries.groupId,
+            name: "Essentials",
+            type: "expense",
+            categories: moved ? [transport] : [groceries, transport],
+          },
+          {
+            id: destinationId,
+            name: "Lifestyle",
+            type: "expense",
+            categories: moved ? [{ ...groceries, groupId: destinationId }] : [],
+          },
+          { id: salary.groupId, name: "Income", type: "income", categories: [salary] },
+        ],
+      }),
+    );
+    server.on(`PATCH /api/v1/categories/${groceries.id}`, async (request) => {
+      moved = true;
+      return json(200, { ...groceries, ...(await request.json()) });
+    });
+    queryClient.setQueryData(["finance", "budgets", thisMonth], monthlyBudgetsResponse(thisMonth));
+    renderFinance("/finance/categories");
+    await userEvent.click(await screen.findByRole("button", { name: "Edit Groceries" }));
+    const select = screen.getByLabelText("Group");
+    await userEvent.click(select);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Essentials",
+      "Lifestyle",
+    ]);
+    await userEvent.click(screen.getByRole("option", { name: "Lifestyle" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save category" }));
+    const lifestyle = within(screen.getByRole("region", { name: "Lifestyle" }));
+    expect(await lifestyle.findByText("Groceries")).toBeTruthy();
+    expect(await server.calls(`PATCH /api/v1/categories/${groceries.id}`)[0]!.json()).toEqual({
+      name: "Groceries",
+      groupId: destinationId,
+    });
+    expect(queryClient.getQueryState(["finance", "budgets", thisMonth])?.isInvalidated).toBe(true);
+  });
+
+  it("shows deletion errors and keeps categories in use", async () => {
+    server.on(`DELETE /api/v1/categories/${groceries.id}`, () =>
+      json(409, {
+        error: { code: "CATEGORY_IN_USE", message: "This category is used by transactions or budgets." },
+      }),
+    );
+    renderFinance("/finance/categories");
+    await userEvent.click(await screen.findByRole("button", { name: "Delete Groceries" }));
+    expect(await screen.findByText("This category is used by transactions or budgets.")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Essentials" })).getByText("Groceries")).toBeTruthy();
+  });
+});
+
+describe("recurring bills", () => {
+  const today = todayIn("Asia/Yangon");
+  const billFixture = (overrides: Partial<Bill> = {}): Bill => ({
+    id: "77777777-7777-4777-8777-777777777777",
+    name: "Internet",
+    amount: "42.50",
+    category: groceries,
+    frequency: "monthly",
+    nextDueDate: today,
+    lastPaidDate: null,
+    updatedAt: "2026-10-29T08:00:00.000Z",
+    ...overrides,
+  });
+
+  it("separates overdue, due-today and upcoming payments", async () => {
+    server.on("GET /api/v1/bills", () =>
+      json(200, {
+        data: [
+          billFixture({ name: "Overdue internet", nextDueDate: "2020-01-01" }),
+          billFixture({ id: "88888888-8888-4888-8888-888888888888", name: "Rent today" }),
+          billFixture({
+            id: "99999999-9999-4999-8999-999999999999",
+            name: "Future subscription",
+            nextDueDate: "2099-01-01",
+          }),
+        ],
+      }),
+    );
+    renderFinance("/finance/bills");
+    expect(
+      within(await screen.findByRole("region", { name: "Overdue" })).getByText("Overdue internet"),
+    ).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "Due today" })).getByText("Rent today")).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "Upcoming" })).getByText("Future subscription"),
+    ).toBeTruthy();
+  });
+
+  it("creates a bill in a side drawer with grouped expense categories", async () => {
+    server.on("POST /api/v1/bills", async (request) => {
+      const values = (await request.json()) as Partial<Bill>;
+      const bill = billFixture(values);
+      server.on("GET /api/v1/bills", () => json(200, { data: [bill] }));
+      return json(201, bill);
+    });
+    renderFinance("/finance/bills");
+    await userEvent.click(await screen.findByRole("button", { name: "Add bill" }));
+    const drawer = within(await screen.findByRole("dialog", { name: "Add bill" }));
+    await userEvent.type(drawer.getByLabelText("Bill name"), " Internet ");
+    await userEvent.type(drawer.getByLabelText("Expected amount"), "42.5");
+    const category = drawer.getByLabelText("Expense category");
+    await userEvent.click(category);
+    expect(screen.getByRole("group", { name: "Essentials" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Salary" })).toBeNull();
+    await userEvent.click(screen.getByRole("option", { name: "Groceries" }));
+    await userEvent.click(drawer.getByRole("button", { name: "Save bill" }));
+    expect(await screen.findByText("Bill created.")).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await server.calls("POST /api/v1/bills")[0]!.json()).toEqual({
+      name: "Internet",
+      amount: "42.50",
+      categoryId: groceries.id,
+      frequency: "monthly",
+      nextDueDate: today,
+    });
+    expect(screen.getByText("Internet")).toBeTruthy();
+  });
+
+  it("edits existing bills and submits their version", async () => {
+    const bill = billFixture();
+    server.on("GET /api/v1/bills", () => json(200, { data: [bill] }));
+    server.on(`PUT /api/v1/bills/${bill.id}`, async (request) =>
+      json(200, { ...bill, ...(await request.json()) }),
+    );
+    renderFinance("/finance/bills");
+    await userEvent.click(await screen.findByRole("button", { name: "Edit Internet" }));
+    const drawer = within(await screen.findByRole("dialog", { name: "Edit bill" }));
+    expect((drawer.getByLabelText("Expected amount") as HTMLInputElement).value).toBe("42.50");
+    await userEvent.clear(drawer.getByLabelText("Expected amount"));
+    await userEvent.type(drawer.getByLabelText("Expected amount"), "55");
+    await chooseOption(drawer.getByLabelText("Repeats"), "Yearly");
+    await userEvent.click(drawer.getByRole("button", { name: "Save bill" }));
+    expect(await screen.findByText("Bill updated.")).toBeTruthy();
+    expect(await server.calls(`PUT /api/v1/bills/${bill.id}`)[0]!.json()).toMatchObject({
+      amount: "55.00",
+      frequency: "yearly",
+      updatedAt: bill.updatedAt,
+    });
+  });
+
+  it("records an actual payment and refreshes bills, transactions and budgets", async () => {
+    const bill = billFixture();
+    server.on("GET /api/v1/bills", () => json(200, { data: [bill] }));
+    server.on(`POST /api/v1/bills/${bill.id}/payments`, () => {
+      server.on("GET /api/v1/bills", () =>
+        json(200, { data: [billFixture({ nextDueDate: "2099-01-01", lastPaidDate: today })] }),
+      );
+      return json(201, { bill, transactionId: "transaction-paid" });
+    });
+    queryClient.setQueryData(["finance", "budgets", thisMonth], monthlyBudgetsResponse(thisMonth));
+    queryClient.setQueryData(["finance", "transactions", "summary", thisMonth], {});
+    renderFinance("/finance/bills");
+    await userEvent.click(await screen.findByRole("button", { name: "Mark Internet paid" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Mark bill paid" }));
+    await userEvent.clear(dialog.getByLabelText("Amount paid"));
+    await userEvent.type(dialog.getByLabelText("Amount paid"), "40.1");
+    await userEvent.click(dialog.getByRole("button", { name: "Record payment" }));
+    expect(await screen.findByText("Bill paid. Expense recorded.")).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await server.calls(`POST /api/v1/bills/${bill.id}/payments`)[0]!.json()).toEqual({
+      amount: "40.10",
+      date: today,
+      dueDate: today,
+      updatedAt: bill.updatedAt,
+    });
+    const upcoming = within(await screen.findByRole("region", { name: "Upcoming" }));
+    expect(upcoming.getByText("Paid")).toBeTruthy();
+    expect(upcoming.getByText(/^Last paid /)).toBeTruthy();
+    expect(queryClient.getQueryState(["finance", "budgets", thisMonth])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(["finance", "transactions", "summary", thisMonth])?.isInvalidated).toBe(
+      true,
+    );
+  });
+
+  it("keeps the payment dialog open on stale or duplicate payments", async () => {
+    const bill = billFixture();
+    server.on("GET /api/v1/bills", () => json(200, { data: [bill] }));
+    server.on(`POST /api/v1/bills/${bill.id}/payments`, () =>
+      json(409, { error: { code: "BILL_CHANGED", message: "This bill was already paid." } }),
+    );
+    renderFinance("/finance/bills");
+    await userEvent.click(await screen.findByRole("button", { name: "Mark Internet paid" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Mark bill paid" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Record payment" }));
+    expect(await dialog.findByText("This bill was already paid.")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("confirms deletion and returns to bills from category management", async () => {
+    const bill = billFixture();
+    server.on("GET /api/v1/bills", () => json(200, { data: [bill] }));
+    server.on(`DELETE /api/v1/bills/${bill.id}`, () => {
+      server.on("GET /api/v1/bills", () => json(200, { data: [] }));
+      return new Response(null, { status: 204 });
+    });
+    renderFinance("/finance/bills");
+    await userEvent.click(await screen.findByRole("link", { name: "Manage categories" }));
+    await userEvent.click(await screen.findByRole("link", { name: "Back to bills" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Delete Internet" }));
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(dialog.getByText(/Expenses already recorded stay/)).toBeTruthy();
+    await userEvent.click(dialog.getByRole("button", { name: /^Delete$/ }));
+    expect(await screen.findByRole("region", { name: "No bills yet" })).toBeTruthy();
+    expect(server.calls(`DELETE /api/v1/bills/${bill.id}`)).toHaveLength(1);
   });
 });

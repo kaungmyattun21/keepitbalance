@@ -41,7 +41,7 @@ describe("POST /api/v1/transactions", () => {
       amount: "42.50",
       date: "2026-09-27",
       note: "Weekly shop",
-      category: { id: body.categoryId, name: "Groceries", type: "expense" },
+      category: { groupId: expect.any(String), id: body.categoryId, name: "Groceries", type: "expense" },
       shoppingListId: null,
       createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
@@ -271,7 +271,7 @@ describe("PUT /api/v1/transactions/:id", () => {
       amount: "2500.00",
       date: "2026-09-30",
       note: "September salary",
-      category: { id: salary.id, name: "Salary", type: "income" },
+      category: { groupId: salary.groupId, id: salary.id, name: "Salary", type: "income" },
       createdAt: original.createdAt,
     });
   });

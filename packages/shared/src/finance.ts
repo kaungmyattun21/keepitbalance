@@ -22,7 +22,34 @@ export const transactionTypeSchema = z.enum(
 
 export type TransactionType = z.infer<typeof transactionTypeSchema>;
 
-export type Category = { id: string; name: string; type: TransactionType };
+export type Category = { id: string; name: string; type: TransactionType; groupId: string };
+
+export type CategoryGroup = {
+  id: string;
+  name: string;
+  type: TransactionType;
+  categories: Category[];
+};
+
+const categoryNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Enter a name.")
+  .max(100, "Name must be at most 100 characters.");
+export const categoryParamsSchema = z.object({ id: z.uuid("Invalid category or group id.") });
+export const createCategoryGroupSchema = z.object({ name: categoryNameSchema, type: transactionTypeSchema });
+export const updateCategoryGroupSchema = z.object({ name: categoryNameSchema });
+export const createCategorySchema = z.object({
+  name: categoryNameSchema,
+  groupId: z.uuid("Choose a group."),
+});
+export const updateCategorySchema = createCategorySchema
+  .partial()
+  .refine((value) => value.name !== undefined || value.groupId !== undefined, "Provide a name or group.");
+export type CreateCategoryGroupValues = z.output<typeof createCategoryGroupSchema>;
+export type UpdateCategoryGroupValues = z.output<typeof updateCategoryGroupSchema>;
+export type CreateCategoryValues = z.output<typeof createCategorySchema>;
+export type UpdateCategoryValues = z.output<typeof updateCategorySchema>;
 
 export const listCategoriesQuerySchema = z.object({ type: transactionTypeSchema.optional() });
 
@@ -121,9 +148,51 @@ export type Budget = {
   remaining: string;
 };
 
+export type BudgetGroup = {
+  group: { id: string; name: string };
+  amount: string;
+  spent: string;
+  remaining: string;
+  budgets: Budget[];
+};
+
 export type MonthlyBudgets = {
   month: string;
   totalBudget: string;
   totalSpent: string;
-  data: Budget[];
+  groups: BudgetGroup[];
 };
+
+export const billFrequencySchema = z.enum(["weekly", "monthly", "yearly"]);
+export type BillFrequency = z.output<typeof billFrequencySchema>;
+export const billParamsSchema = z.object({ id: z.uuid("Invalid bill id.") });
+export const createBillSchema = z.object({
+  name: z.string().trim().min(1, "Enter a bill name.").max(100, "Name must be at most 100 characters."),
+  amount: positiveMoneySchema,
+  categoryId: z.uuid("Choose an expense category."),
+  frequency: billFrequencySchema,
+  nextDueDate: calendarDateSchema,
+});
+export const updateBillSchema = createBillSchema.extend({ updatedAt: z.iso.datetime() });
+export const payBillSchema = z.object({
+  dueDate: calendarDateSchema,
+  date: calendarDateSchema,
+  amount: positiveMoneySchema,
+  updatedAt: z.iso.datetime(),
+});
+export type CreateBillInput = z.input<typeof createBillSchema>;
+export type CreateBillValues = z.output<typeof createBillSchema>;
+export type UpdateBillValues = z.output<typeof updateBillSchema>;
+export type PayBillInput = z.input<typeof payBillSchema>;
+export type PayBillValues = z.output<typeof payBillSchema>;
+export type Bill = {
+  id: string;
+  name: string;
+  amount: string;
+  category: Category;
+  frequency: BillFrequency;
+  nextDueDate: string;
+  lastPaidDate: string | null;
+  updatedAt: string;
+};
+export type BillPaymentResult = { bill: Bill; transactionId: string };
