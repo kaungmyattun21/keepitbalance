@@ -10,6 +10,7 @@ import {
   requireSession,
 } from "@/modules/auth";
 import { lazyDashboardPage } from "@/modules/dashboard";
+import { groceriesRoute } from "@/modules/groceries";
 import { financeRoute } from "@/modules/finance";
 import { NotFoundPage, PageLoader, RouteErrorBoundary } from "@/modules/shell";
 import { AppShell } from "./AppShell.tsx";
@@ -27,6 +28,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, lazy: lazyDashboardPage },
           financeRoute,
+          groceriesRoute,
           { path: "*", Component: NotFoundPage },
         ],
       },

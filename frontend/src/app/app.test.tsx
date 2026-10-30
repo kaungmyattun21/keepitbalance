@@ -61,7 +61,8 @@ describe("app shell", () => {
 
     expect(screen.getAllByRole("link", { name: "Dashboard" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Finance" }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: /Meals/ })).toBeNull();
+    expect(screen.getAllByRole("link", { name: /Groceries/ }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: /Health/ })).toBeNull();
   });
 
   it("names each page in the document title and lets keyboard users skip to the content", async () => {

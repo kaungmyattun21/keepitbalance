@@ -1,3 +1,5 @@
+export { categoryGroupsQuery, useCategoryGroups } from "./shared/hooks/use-category-groups.ts";
+export { invalidateMoneyQueries } from "./shared/invalidate-money-queries.ts";
 import type { RouteObject } from "react-router";
 import { FinanceLayout } from "./shared/components/FinanceLayout.tsx";
 

@@ -12,7 +12,12 @@ const appModules = [
     icon: Wallet,
     to: "/finance",
   },
-  { title: "Meals", description: "Recipes, pantry, meal plans and grocery lists.", icon: UtensilsCrossed },
+  {
+    title: "Groceries",
+    description: "Shopping lists, pantry stock and grocery spending.",
+    icon: UtensilsCrossed,
+    to: "/meals",
+  },
   { title: "Health", description: "Daily water and calorie goals.", icon: HeartPulse },
 ];
 

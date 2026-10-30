@@ -72,8 +72,11 @@ model User {
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  sessions        Session[]
-  accounts        Account[]
+  sessions          Session[]
+  accounts          Account[]
+  groceryCategoryId String?   @map("grocery_category_id") @db.Uuid
+  groceryCategory   Category? @relation("DefaultGroceryCategory", fields: [groceryCategoryId], references: [id], onDelete: SetNull)
+
   categoryGroups  CategoryGroup[]
   categories      Category[]
   transactions    Transaction[]
@@ -174,12 +177,13 @@ model Category {
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Composite FK: the group must belong to the SAME user and have the SAME type.
-  group        CategoryGroup @relation(fields: [groupId, userId, type], references: [id, userId, type], onDelete: Restrict, map: "categories_group_fkey")
-  transactions Transaction[]
-  budgets      Budget[]
-  bills        Bill[]
+  group             CategoryGroup @relation(fields: [groupId, userId, type], references: [id, userId, type], onDelete: Restrict, map: "categories_group_fkey")
+  transactions      Transaction[]
+  budgets           Budget[]
+  bills             Bill[]
+  defaultGroceryFor User[]        @relation("DefaultGroceryCategory")
 
   @@unique([userId, type, name]) // no duplicate names per user + type
   @@unique([id, userId, type]) // target of the composite FK on Transaction
@@ -364,6 +368,7 @@ model ShoppingListItem {
   shoppingListId String   @map("shopping_list_id") @db.Uuid
   ingredientId   String   @map("ingredient_id") @db.Uuid
   quantity       Decimal  @db.Decimal(10, 2)
+  price          Decimal? @db.Decimal(12, 2)
   checked        Boolean  @default(false)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)

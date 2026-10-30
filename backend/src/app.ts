@@ -11,6 +11,7 @@ import {
   createDefaultCategories,
   transactionRoutes,
 } from "./modules/finance/index.ts";
+import { ingredientRoutes, pantryRoutes, shoppingListRoutes } from "./modules/groceries/index.ts";
 import { config } from "./shared/config.ts";
 import { prisma } from "./shared/db.ts";
 import { errorHandler, notFoundHandler } from "./shared/middleware/error-handler.ts";
@@ -50,6 +51,9 @@ api.use("/auth-config", authConfigRoutes);
 api.use("/me", meRoutes);
 api.use("/budgets", budgetRoutes);
 api.use("/bills", billRoutes);
+api.use("/ingredients", ingredientRoutes);
+api.use("/pantry", pantryRoutes);
+api.use("/shopping-lists", shoppingListRoutes);
 api.use("/categories", categoryRoutes);
 api.use("/category-groups", categoryGroupRoutes);
 api.use("/transactions", transactionRoutes);
