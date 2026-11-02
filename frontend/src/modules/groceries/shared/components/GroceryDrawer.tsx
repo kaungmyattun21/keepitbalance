@@ -18,6 +18,7 @@ export function GroceryDrawer({
   return (
     <Sheet open={open} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
+        className="border-border/70 bg-card"
         onOpenAutoFocus={() => {
           trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         }}
@@ -28,8 +29,8 @@ export function GroceryDrawer({
           }
         }}
       >
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
+        <SheetHeader className="border-border/60 py-7">
+          <SheetTitle className="text-xl font-medium">{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
         {children}

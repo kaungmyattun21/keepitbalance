@@ -11,14 +11,14 @@
 
 ## Status
 
-**Milestone 1 of 5 done: foundation and authentication.** The business modules come next.
+**Finance and groceries are available locally.** Health and deployment are still planned.
 
 | Milestone | Scope | Status |
 |---|---|---|
 | 1. Setup + Auth | Project structure, CI, accounts | ✅ Done (real email delivery and Google sign-in still to be configured) |
-| 2. Finance | Transactions, categories, monthly summary | Next |
-| 3. Groceries & Meals | Ingredients, recipes, pantry, meal plans, shopping lists | Planned |
-| 4. Shopping → Finance | Finishing a shopping trip records the expense | Planned |
+| 2. Finance | Transactions, grouped budgets, recurring bills, quick logging and monthly summary | Built |
+| 3. Groceries & Meals | Ingredients, recipes, pantry, weekly meal plans and shopping generation | Built |
+| 4. Shopping → Finance | Finishing a shopping trip records the expense and updates pantry stock | Built |
 | 5. Health | Water and calorie goals, daily progress | Planned |
 
 ## Features
@@ -30,10 +30,17 @@
 - App shell: sidebar on desktop, bottom navigation on mobile, light/dark/system theme without a flash on load
 - Every page you open while logged out sends you to login and back again afterwards
 
+- Income and expense tracking, category groups, budgets, recurring bills and a quick-log keypad
+- Recipes with reusable ingredients, servings, instructions, calories per serving and an optional photo
+- Private recipe photos stored in PostgreSQL (JPEG, PNG or WebP, up to 2 MB), with preview, replacement and removal
+- Weekly meal planning with breakfast, lunch, dinner and snacks; mark meals eaten or planned
+- Shopping previews scale recipe quantities, subtract pantry and list coverage, and add only missing quantities
+- Generation preserves checked/priced items and flags excess quantities for review; stale previews must be refreshed
+- Finishing shopping updates pantry stock and records one expense against the selected category budget
+
+Marking a meal eaten records its status and calories. Pantry consumption is recorded separately with **Adjust stock**.
+
 **Planned**
-- Income and expense tracking with categories and a monthly summary
-- Recipes, pantry, weekly meal plans and a generated grocery list
-- Finishing a shopping trip updates the pantry and records the expense in one step
 - Daily water and calorie goals with progress
 
 ## Tech Stack
@@ -66,8 +73,10 @@ frontend/src/                       backend/src/
 ├── app/       wiring only          ├── app.ts, server.ts   wiring, startup
 ├── modules/                        ├── modules/
 │   ├── shell      layout, theme    │   ├── auth        Better Auth, /me
-│   ├── auth       pages, guards    │   └── finance     categories (more in milestone 2)
-│   └── dashboard                   └── shared/         config, db, errors, middleware
+│   ├── auth       pages, guards    │   ├── finance     transactions, budgets, bills
+│   ├── dashboard                   │   └── groceries   recipes, plans, pantry, shopping
+│   ├── finance                     └── shared/         config, db, errors, middleware
+│   └── groceries
 └── shared/    ui, api client       packages/shared/    rules and types used by both apps
 ```
 
@@ -127,7 +136,9 @@ Verification and password-reset emails are printed in the API's terminal.
 ### API request limits and reverse proxies
 
 JSON API bodies and all authentication bodies are limited to 100 KiB, including streamed/chunked
-requests. Larger bodies return `413`; compressed request bodies are unsupported and return `415`.
+requests. Recipe endpoints allow up to 3 MiB to accommodate base64-encoded photos; each decoded
+photo is limited to 2 MiB. Larger bodies return `413`; compressed request bodies are unsupported
+and return `415`.
 
 `TRUSTED_PROXIES` defaults to empty: client addresses come from the TCP connection, and client-supplied
 forwarded IP/protocol headers are ignored. When deploying behind a proxy, set it to a comma-separated

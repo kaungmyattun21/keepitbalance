@@ -1,3 +1,4 @@
+export { QuickTransactionEntry } from "./features/transactions/components/QuickTransactionEntry.tsx";
 export { categoryGroupsQuery, useCategoryGroups } from "./shared/hooks/use-category-groups.ts";
 export { invalidateMoneyQueries } from "./shared/invalidate-money-queries.ts";
 import type { RouteObject } from "react-router";

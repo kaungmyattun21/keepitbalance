@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ComponentProps } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from "react";
 import { format } from "date-fns/format";
 import { isValid } from "date-fns/isValid";
 import { parseISO } from "date-fns/parseISO";
@@ -17,12 +17,31 @@ type DatePickerProps = Omit<ComponentProps<typeof Input>, "type" | "value" | "on
 
 export function DatePicker({ value, onChange, label, disabled, ...props }: DatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [alignOffset, setAlignOffset] = useState(0);
+  const trigger = useRef<HTMLButtonElement>(null);
+  function alignCalendar() {
+    const right = trigger.current?.getBoundingClientRect().right;
+    if (right === undefined) return;
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const width = Math.min(288, viewportWidth - 16);
+    const left = right - width;
+    const boundedLeft = Math.max(8, Math.min(left, viewportWidth - width - 8));
+    setAlignOffset(left - boundedLeft);
+  }
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("resize", alignCalendar);
+    return () => window.removeEventListener("resize", alignCalendar);
+  }, [open]);
   const parsed = parseISO(value);
   // Calendar days stay local here: ISO timestamps would shift dates in some timezones.
   const selected = isValid(parsed) && format(parsed, "yyyy-MM-dd") === value ? parsed : undefined;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(nextOpen) => {
+      if (nextOpen) alignCalendar();
+      setOpen(nextOpen);
+    }}>
       <div className="relative">
         <Input
           {...props}
@@ -37,6 +56,7 @@ export function DatePicker({ value, onChange, label, disabled, ...props }: DateP
         />
         <PopoverTrigger asChild>
           <Button
+            ref={trigger}
             type="button"
             variant="ghost"
             size="icon-sm"
@@ -51,13 +71,14 @@ export function DatePicker({ value, onChange, label, disabled, ...props }: DateP
       <PopoverContent
         side="bottom"
         align="end"
+        alignOffset={alignOffset}
         sideOffset={6}
         avoidCollisions={false}
         collisionPadding={8}
-        className="z-60 max-h-(--radix-popover-content-available-height) w-auto max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain p-0"
+        className="z-60 max-h-(--radix-popover-content-available-height) w-72 max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain p-0"
         aria-label={`Choose ${label.toLowerCase()}`}
       >
-        <div className="min-h-88 w-72 max-w-full">
+        <div className="min-h-88 w-full">
           <Suspense
             fallback={
               <div

@@ -3,10 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="description" content="Track your money, meals and health in one calm place." />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafd" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#040a17" />
+    <meta name="theme-color" content="#040a17" />
     <title>KeepItBalance</title>
     <script>
       try {
@@ -14,6 +16,9 @@
         const dark =
           theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.classList.toggle("dark", dark);
+        document
+          .querySelector('meta[name="theme-color"]')
+          ?.setAttribute("content", dark ? "#040a17" : "#f7f9fa");
       } catch {}
     </script>
   </head>

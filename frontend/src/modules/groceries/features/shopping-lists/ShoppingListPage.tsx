@@ -5,7 +5,7 @@ import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ShoppingItem, ShoppingList, CurrentShoppingList } from "@keepitbalance/shared/groceries";
 import { toast } from "sonner";
-import { ShoppingBasket } from "lucide-react";
+import { Plus, ShoppingBasket } from "lucide-react";
 import { DocumentTitle } from "@/shared/components/DocumentTitle";
 import { Button } from "@/shared/components/ui/button";
 import { SectionCard } from "@/shared/components/SectionCard";
@@ -22,6 +22,7 @@ export function ShoppingListPage() {
   const { data: list, defaultCategoryId } = useCurrentListView();
   const client = useQueryClient();
   const listId = list?.id;
+  const purchased = list?.items.filter((item) => item.checked).length ?? 0;
   const totals = shoppingTotals(list?.items ?? []);
   const mutation = useShoppingMutation();
   const { mutateAsync } = mutation;
@@ -57,14 +58,20 @@ export function ShoppingListPage() {
       {!list ? (
         <section
           aria-label="No open shopping list"
-          className="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-card/50 px-6 py-14 text-center"
+          className="flex flex-col items-center gap-4 rounded-2xl border border-border/70 bg-card px-6 py-20 text-center sm:py-28"
         >
-          <ShoppingBasket className="size-8 text-brand" aria-hidden />
-          <h2 className="text-lg font-semibold">Start your next shopping trip</h2>
+          <div className="mb-2 grid size-16 place-items-center rounded-2xl border border-border/60 bg-muted/50">
+            <ShoppingBasket className="size-7 text-brand" strokeWidth={1.5} aria-hidden />
+          </div>
+          <h2 className="text-xl font-medium tracking-tight">Start your next shopping trip</h2>
           <p className="text-sm text-muted-foreground">
             Add ingredients, check off purchases and record the total when you're done.
           </p>
-          <Button disabled={mutation.isPending} onClick={() => void start()}>
+          <Button
+            className="mt-2 rounded-full px-5"
+            disabled={mutation.isPending}
+            onClick={() => void start()}
+          >
             {mutation.isPending ? "Creating…" : "Create shopping list"}
           </Button>
         </section>
@@ -72,27 +79,60 @@ export function ShoppingListPage() {
         <>
           <SectionCard
             title="Your shopping list"
-            description={`${list.items.filter((item) => item.checked).length} of ${list.items.length} items purchased`}
-            action={<Button onClick={() => setEditor("new")}>Add item</Button>}
+            description={`${purchased} of ${list.items.length} items purchased`}
+            action={
+              <Button className="rounded-full px-4" onClick={() => setEditor("new")}>
+                <Plus className="size-4" aria-hidden /> Add item
+              </Button>
+            }
           >
             {list.items.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Your list is empty. Add an ingredient to begin.</p>
+              <p className="py-14 text-center text-sm text-muted-foreground">
+                Your list is empty. Add an ingredient to begin.
+              </p>
             ) : (
-              <ul className="divide-y">
-                {list.items.map((item) => (
-                  <ShoppingItemRow
-                    key={item.id}
-                    listId={list.id}
-                    item={item}
-                    disabled={mutation.isPending}
-                    onEdit={setEditor}
-                    onRemove={remove}
-                  />
-                ))}
-              </ul>
+              <>
+                <div
+                  className="hidden grid-cols-[minmax(0,1fr)_6rem_4.5rem] gap-3 border-b border-border/60 py-3 text-xs text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_8rem_5rem] sm:gap-5"
+                  aria-hidden="true"
+                >
+                  <span>Item</span>
+                  <span className="text-right">Total price</span>
+                  <span className="sr-only">Actions</span>
+                </div>
+                <ul className="divide-y divide-border/60">
+                  {list.items.map((item) => (
+                    <ShoppingItemRow
+                      key={item.id}
+                      listId={list.id}
+                      item={item}
+                      disabled={mutation.isPending}
+                      onEdit={setEditor}
+                      onRemove={remove}
+                    />
+                  ))}
+                </ul>
+              </>
             )}
-            <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 border-t pt-4">
-              <p className="font-medium">Checked total: {formatMoney(totals.amount)}</p>
+            {list.items.length > 0 && (
+              <div
+                role="progressbar"
+                aria-label="Shopping progress"
+                aria-valuemin={0}
+                aria-valuemax={list.items.length}
+                aria-valuenow={purchased}
+                className="my-5 h-1 overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className="h-full rounded-full bg-brand"
+                  style={{ width: `${(purchased / list.items.length) * 100}%` }}
+                />
+              </div>
+            )}
+            <div className="flex flex-wrap items-baseline justify-between gap-2 pt-2">
+              <p className="text-lg font-medium tracking-tight tabular-nums">
+                Checked total: {formatMoney(totals.amount)}
+              </p>
               {totals.missingPrices > 0 && (
                 <p className="text-sm text-muted-foreground">
                   {totals.missingPrices} purchased {totals.missingPrices === 1 ? "item needs" : "items need"}{" "}

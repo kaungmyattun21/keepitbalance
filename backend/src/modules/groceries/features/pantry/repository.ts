@@ -1,3 +1,4 @@
+import { withGroceryWrite } from "../../shared/transaction.ts";
 import { prisma } from "../../../../shared/db.ts";
 import { pantryInclude } from "../../shared/response.ts";
 
@@ -12,13 +13,15 @@ export function findIngredient(userId: string, id: string) {
   return prisma.ingredient.findFirst({ where: { id, userId } });
 }
 export function create(userId: string, ingredientId: string, quantity: string) {
-  return prisma.pantryItem.create({ data: { userId, ingredientId, quantity }, include: pantryInclude });
+  return withGroceryWrite(userId, (tx) =>
+    tx.pantryItem.create({ data: { userId, ingredientId, quantity }, include: pantryInclude }),
+  );
 }
 export function find(userId: string, id: string) {
   return prisma.pantryItem.findFirst({ where: { id, userId }, include: pantryInclude });
 }
 export function update(userId: string, id: string, version: Date, quantity: string) {
-  return prisma.$transaction(async (tx) => {
+  return withGroceryWrite(userId, async (tx) => {
     const result = await tx.pantryItem.updateMany({
       where: { userId, id, updatedAt: version },
       data: { quantity, updatedAt: new Date(Math.max(Date.now(), version.getTime() + 1)) },
@@ -27,7 +30,7 @@ export function update(userId: string, id: string, version: Date, quantity: stri
   });
 }
 export function adjust(userId: string, id: string, quantity: string, direction: "add" | "remove") {
-  return prisma.$transaction(async (tx) => {
+  return withGroceryWrite(userId, async (tx) => {
     const result = await tx.pantryItem.updateMany({
       where: { userId, id, quantity: direction === "remove" ? { gte: quantity } : undefined },
       data: { quantity: direction === "add" ? { increment: quantity } : { decrement: quantity } },
@@ -36,5 +39,5 @@ export function adjust(userId: string, id: string, quantity: string, direction: 
   });
 }
 export function remove(userId: string, id: string) {
-  return prisma.pantryItem.delete({ where: { userId, id } });
+  return withGroceryWrite(userId, (tx) => tx.pantryItem.delete({ where: { userId, id } }));
 }

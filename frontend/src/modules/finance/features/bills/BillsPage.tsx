@@ -34,7 +34,7 @@ export function BillsPage() {
 
   return (
     <Sheet open={editor !== null} onOpenChange={(open) => !open && closeEditor()}>
-      <div className="flex w-full flex-col gap-6">
+      <div className="flex w-full min-w-0 flex-col gap-6">
         <DocumentTitle title="Bills" />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -43,7 +43,7 @@ export function BillsPage() {
               Track what's due and record payments when you make them.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <Link
               className="text-sm underline underline-offset-4"
               to="/finance/categories"

@@ -29,11 +29,27 @@ async function lazyHistoryPage() {
   ]);
   return { Component: ShoppingHistoryPage, loader: shoppingHistoryPageLoader };
 }
+async function lazyRecipesPage() {
+  const [{ RecipesPage }, { recipesPageLoader }] = await Promise.all([
+    import("./features/recipes/RecipesPage.tsx"),
+    import("./features/recipes/recipes-page-loader.ts"),
+  ]);
+  return { Component: RecipesPage, loader: recipesPageLoader };
+}
+async function lazyMealPlanPage() {
+  const [{ MealPlanPage }, { mealPlanPageLoader }] = await Promise.all([
+    import("./features/meal-plans/MealPlanPage.tsx"),
+    import("./features/meal-plans/meal-plan-page-loader.ts"),
+  ]);
+  return { Component: MealPlanPage, loader: mealPlanPageLoader };
+}
 export const groceriesRoute: RouteObject = {
   path: "meals",
   Component: GroceryLayout,
   children: [
     { index: true, lazy: lazyShoppingListPage },
+    { path: "plan", lazy: lazyMealPlanPage },
+    { path: "recipes", lazy: lazyRecipesPage },
     { path: "pantry", lazy: lazyPantryPage },
     { path: "ingredients", lazy: lazyIngredientsPage },
     { path: "history", lazy: lazyHistoryPage },

@@ -6,11 +6,7 @@ export function AuthLayout() {
   return (
     <div className="relative isolate flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background px-4 py-12">
       <SkipLink />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[radial-gradient(ellipse_60%_100%_at_50%_0%,var(--brand-subtle),transparent)]"
-      />
-      <div className="flex w-full max-w-[25rem] flex-col items-center gap-8">
+      <div className="flex w-full max-w-[27rem] flex-col items-center gap-8">
         <Link
           to="/"
           className="flex items-center gap-2.5 rounded-lg font-heading text-lg font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"

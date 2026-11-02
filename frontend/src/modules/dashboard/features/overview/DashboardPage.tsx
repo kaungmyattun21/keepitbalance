@@ -32,7 +32,7 @@ export function DashboardPage() {
         <h2 id="modules-heading" className="text-sm font-medium text-muted-foreground">
           Modules
         </h2>
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {appModules.map((appModule) => (
             <li key={appModule.title}>
               <ModuleCard {...appModule} />
@@ -41,7 +41,7 @@ export function DashboardPage() {
         </ul>
       </section>
 
-      <p className="flex items-center gap-2 text-xs text-muted-foreground">
+      <p className="flex items-center gap-2 border-t border-border/60 pt-5 text-xs text-muted-foreground">
         <span
           aria-hidden
           className={cn("size-1.5 rounded-full", apiHealthy ? "bg-brand" : "bg-destructive")}

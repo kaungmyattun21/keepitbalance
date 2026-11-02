@@ -18,11 +18,11 @@ type AuthCardProps = {
 
 export function AuthCard({ title, description, footer, children }: AuthCardProps) {
   return (
-    <Card className="shadow-sm">
+    <Card className="shadow-none [--card-spacing:--spacing(7)] sm:[--card-spacing:--spacing(8)]">
       <DocumentTitle title={title} />
       <CardHeader className="gap-1.5">
         <CardTitle>
-          <h1 className="font-heading text-xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="font-heading text-2xl font-medium tracking-tight">{title}</h1>
         </CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>

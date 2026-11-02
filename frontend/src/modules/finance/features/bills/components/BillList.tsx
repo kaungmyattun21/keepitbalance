@@ -22,12 +22,12 @@ export function BillList({ title, bills, overdue = false, onEdit, onPay, onDelet
       title={title}
       className={
         overdue
-          ? "[&_[data-slot=card-title]]:text-destructive [&_[data-slot=card]]:ring-destructive/25"
+          ? "[&_[data-slot=card-title]]:text-destructive [&_[data-slot=card]]:border-destructive/25"
           : undefined
       }
       description={`${bills.length} ${bills.length === 1 ? "bill" : "bills"} · ${formatMoney(sumMoney(bills.map((bill) => bill.amount)))} due`}
     >
-      <ul className="divide-y">
+      <ul className="divide-y divide-border/60">
         {bills.map((bill) => (
           <li key={bill.id} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
             <div className="flex items-start justify-between gap-3">
@@ -36,7 +36,7 @@ export function BillList({ title, bills, overdue = false, onEdit, onPay, onDelet
               </h3>
               {bill.lastPaidDate && (
                 <span
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-subtle px-2.5 py-1 text-xs font-medium text-brand"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand/15 bg-brand-subtle/50 px-2.5 py-1 text-xs font-medium text-brand"
                   aria-label={`Last payment paid on ${formatCalendarDate(bill.lastPaidDate)}`}
                 >
                   <Check className="size-3.5" aria-hidden />
@@ -44,8 +44,8 @@ export function BillList({ title, bills, overdue = false, onEdit, onPay, onDelet
                 </span>
               )}
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
+            <div className="flex min-w-0 flex-col gap-3 @2xl/section:flex-row @2xl/section:items-center @2xl/section:justify-between">
+              <div className="min-w-0 flex-1 wrap-anywhere">
                 <p className="mt-1 text-sm text-muted-foreground">
                   {bill.category.name} · {bill.frequency} ·{" "}
                   <span className={cn(overdue && "font-medium text-destructive")}>
@@ -59,7 +59,12 @@ export function BillList({ title, bills, overdue = false, onEdit, onPay, onDelet
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className={cn("mr-2 font-semibold tabular-nums", overdue && "text-destructive")}>
+                <span
+                  className={cn(
+                    "w-full min-w-0 font-medium wrap-anywhere tabular-nums @2xl/section:mr-2 @2xl/section:w-auto",
+                    overdue && "text-destructive",
+                  )}
+                >
                   {formatMoney(bill.amount)}
                 </span>
                 <Button size="sm" aria-label={`Mark ${bill.name} paid`} onClick={() => onPay(bill)}>

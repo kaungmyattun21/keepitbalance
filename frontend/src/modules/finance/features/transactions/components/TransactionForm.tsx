@@ -31,13 +31,13 @@ export function TransactionForm({ onCancel, ...options }: TransactionFormProps) 
 
   return (
     <FieldIdScope>
-      <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <form noValidate onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-6">
         <FormAlert message={formError} />
 
         <FieldGroup>
           <TransactionTypeField value={selectedType} onChange={changeType} disabled={isShoppingExpense} />
 
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 @md/field-group:grid-cols-2">
             <TextField
               control={form.control}
               name="amount"

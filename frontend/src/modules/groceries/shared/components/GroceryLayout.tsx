@@ -1,40 +1,22 @@
-import { NavLink, Outlet } from "react-router";
+import { Outlet } from "react-router";
+import { BookOpen, CalendarDays, History, Leaf, Package, ShoppingBasket } from "lucide-react";
 import { PageHeader } from "@/shared/components/Page";
-import { cn } from "@/shared/lib/utils";
+import { SectionNavigation } from "@/shared/components/SectionNavigation";
+
+const grocerySections = [
+  { to: "/meals", label: "Shopping list", icon: ShoppingBasket, end: true },
+  { to: "/meals/plan", label: "Meal plan", icon: CalendarDays },
+  { to: "/meals/recipes", label: "Recipes", icon: BookOpen },
+  { to: "/meals/pantry", label: "Pantry", icon: Package },
+  { to: "/meals/ingredients", label: "Ingredients", icon: Leaf },
+  { to: "/meals/history", label: "History", icon: History },
+];
 
 export function GroceryLayout() {
   return (
-    <div className="flex w-full flex-col gap-6">
-      <PageHeader
-        title="Groceries"
-        description="Plan your shopping, keep track of pantry stock and record grocery spending in one place."
-      />
-      <nav aria-label="Grocery sections" className="overflow-x-auto">
-        <div className="flex min-w-max gap-1 border-b">
-          {[
-            { to: "/meals", label: "Shopping list", end: true },
-            { to: "/meals/pantry", label: "Pantry" },
-            { to: "/meals/ingredients", label: "Ingredients" },
-            { to: "/meals/history", label: "History" },
-          ].map((tab) => (
-            <NavLink
-              key={tab.to}
-              to={tab.to}
-              end={tab.end}
-              className={({ isActive }) =>
-                cn(
-                  "border-b-2 px-3 py-2 text-sm font-medium",
-                  isActive
-                    ? "border-brand text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )
-              }
-            >
-              {tab.label}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+    <div className="flex w-full min-w-0 flex-col gap-4 sm:gap-8">
+      <PageHeader title="Groceries" description="Your shopping, pantry and everyday essentials." />
+      <SectionNavigation label="Grocery sections" items={grocerySections} />
       <Outlet />
     </div>
   );

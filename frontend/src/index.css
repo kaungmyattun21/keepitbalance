@@ -53,30 +53,32 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Every text/background pair below meets WCAG AA (4.5:1) in both themes. */
+/* Cool neutral surfaces with green accents in both themes. Red marks expenses and errors. */
 :root {
   color-scheme: light;
-  --background: oklch(0.985 0.004 250);
-  --foreground: oklch(0.2 0.03 262);
+  --app-mobile-header-height: calc(3.5rem + env(safe-area-inset-top, 0px));
+  --app-bottom-nav-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  --background: oklch(0.98 0.003 250);
+  --foreground: oklch(0.22 0.007 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.03 262);
+  --card-foreground: oklch(0.22 0.007 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.03 262);
-  --primary: oklch(0.72 0.19 150);
-  --primary-foreground: oklch(0.16 0.03 262);
-  --secondary: oklch(0.96 0.008 250);
-  --secondary-foreground: oklch(0.2 0.03 262);
-  --muted: oklch(0.96 0.008 250);
-  --muted-foreground: oklch(0.5 0.03 258);
-  --accent: oklch(0.95 0.04 155);
-  --accent-foreground: oklch(0.35 0.09 155);
+  --popover-foreground: oklch(0.22 0.007 250);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --secondary: oklch(0.95 0.004 250);
+  --secondary-foreground: oklch(0.25 0.007 250);
+  --muted: oklch(0.955 0.004 250);
+  --muted-foreground: oklch(0.48 0.009 250);
+  --accent: var(--brand-subtle);
+  --accent-foreground: var(--brand);
   --destructive: oklch(0.55 0.21 27);
-  --border: oklch(0.91 0.01 255);
-  --input: oklch(0.86 0.012 255);
+  --border: oklch(0.89 0.006 250);
+  --input: oklch(0.86 0.007 250);
   --ring: oklch(0.52 0.14 150);
   --brand: oklch(0.52 0.14 150);
   --brand-foreground: oklch(1 0 0);
-  --brand-subtle: oklch(0.95 0.04 155);
+  --brand-subtle: oklch(0.95 0.03 165);
   --expense: oklch(0.55 0.2 25);
   --expense-subtle: oklch(0.96 0.025 20);
   --chart-1: oklch(0.62 0.18 150);
@@ -84,14 +86,14 @@
   --chart-3: oklch(0.72 0.17 125);
   --chart-4: oklch(0.5 0.12 160);
   --chart-5: oklch(0.62 0.1 200);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.004 250);
-  --sidebar-foreground: oklch(0.2 0.03 262);
-  --sidebar-primary: oklch(0.72 0.19 150);
-  --sidebar-primary-foreground: oklch(0.16 0.03 262);
-  --sidebar-accent: oklch(1 0 0);
-  --sidebar-accent-foreground: oklch(0.2 0.03 262);
-  --sidebar-border: oklch(0.91 0.01 255);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.97 0.004 250);
+  --sidebar-foreground: oklch(0.22 0.007 250);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-accent: var(--brand-subtle);
+  --sidebar-accent-foreground: var(--brand);
+  --sidebar-border: oklch(0.89 0.006 250);
   --sidebar-ring: oklch(0.52 0.14 150);
 }
 
@@ -103,21 +105,21 @@
   --card-foreground: oklch(0.96 0.01 250);
   --popover: oklch(0.2 0.034 262);
   --popover-foreground: oklch(0.96 0.01 250);
-  --primary: oklch(0.8 0.19 150);
-  --primary-foreground: oklch(0.16 0.03 262);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
   --secondary: oklch(0.24 0.035 262);
   --secondary-foreground: oklch(0.96 0.01 250);
   --muted: oklch(0.24 0.035 262);
   --muted-foreground: oklch(0.72 0.03 255);
-  --accent: oklch(0.26 0.05 165);
-  --accent-foreground: oklch(0.9 0.05 155);
+  --accent: var(--brand-subtle);
+  --accent-foreground: var(--brand);
   --destructive: oklch(0.7 0.19 22);
   --border: oklch(0.27 0.035 262);
   --input: oklch(0.32 0.04 262);
   --ring: oklch(0.8 0.19 150);
   --brand: oklch(0.8 0.19 150);
   --brand-foreground: oklch(0.16 0.03 262);
-  --brand-subtle: oklch(0.27 0.06 158);
+  --brand-subtle: oklch(0.27 0.045 168);
   --expense: oklch(0.72 0.17 22);
   --expense-subtle: oklch(0.27 0.05 20);
   --chart-1: oklch(0.8 0.19 150);
@@ -127,10 +129,10 @@
   --chart-5: oklch(0.76 0.1 200);
   --sidebar: oklch(0.165 0.031 262);
   --sidebar-foreground: oklch(0.96 0.01 250);
-  --sidebar-primary: oklch(0.8 0.19 150);
-  --sidebar-primary-foreground: oklch(0.16 0.03 262);
-  --sidebar-accent: oklch(0.23 0.04 262);
-  --sidebar-accent-foreground: oklch(0.96 0.01 250);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-accent: var(--brand-subtle);
+  --sidebar-accent-foreground: var(--brand);
   --sidebar-border: oklch(0.27 0.035 262);
   --sidebar-ring: oklch(0.8 0.19 150);
 }
@@ -138,6 +140,8 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent) transparent;
   }
   html {
     @apply font-sans;
@@ -161,6 +165,38 @@
   }
 }
 
+/* Fallback for browsers that use WebKit scrollbar styling. */
+@supports not (scrollbar-width: thin) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    min-height: 32px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}
+
+@media (forced-colors: active) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+}
+
 /* The root already reserves scrollbar space. Radix scroll locks must not add
    another gutter when a dialog, sheet or select opens. Keep its overflow lock. */
 @supports (scrollbar-gutter: stable) {
@@ -177,5 +213,16 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Native-style touch feedback without blocking zoom, selection or keyboard focus. */
+@media (pointer: coarse) {
+  a,
+  button,
+  input[type="checkbox"],
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }

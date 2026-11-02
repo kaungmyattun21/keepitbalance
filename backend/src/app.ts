@@ -11,7 +11,14 @@ import {
   createDefaultCategories,
   transactionRoutes,
 } from "./modules/finance/index.ts";
-import { ingredientRoutes, pantryRoutes, shoppingListRoutes } from "./modules/groceries/index.ts";
+import {
+  ingredientRoutes,
+  pantryRoutes,
+  shoppingListRoutes,
+  recipeRoutes,
+  mealPlanRoutes,
+  generationRoutes,
+} from "./modules/groceries/index.ts";
 import { config } from "./shared/config.ts";
 import { prisma } from "./shared/db.ts";
 import { errorHandler, notFoundHandler } from "./shared/middleware/error-handler.ts";
@@ -38,6 +45,8 @@ app.all("/api/v1/auth/*splat", text({ ...bodyOptions, type: () => true }), async
   await handleAuth(req, res);
 });
 
+// Recipe photos are base64-encoded; keep the larger allowance scoped to recipes.
+app.use("/api/v1/recipes", json({ ...bodyOptions, limit: "3mb" }));
 app.use(json(bodyOptions));
 
 const api = Router();
@@ -51,6 +60,9 @@ api.use("/auth-config", authConfigRoutes);
 api.use("/me", meRoutes);
 api.use("/budgets", budgetRoutes);
 api.use("/bills", billRoutes);
+api.use("/recipes", recipeRoutes);
+api.use("/meal-plans", mealPlanRoutes);
+api.use("/shopping-generation", generationRoutes);
 api.use("/ingredients", ingredientRoutes);
 api.use("/pantry", pantryRoutes);
 api.use("/shopping-lists", shoppingListRoutes);

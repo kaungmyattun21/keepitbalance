@@ -13,9 +13,9 @@ export function TransactionsPage() {
   const categories = useCategories();
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-6 @4xl/finance:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
       <DocumentTitle title="Transactions" />
-      <div className="flex justify-end lg:col-span-2">
+      <div className="flex justify-end @4xl/finance:col-span-2">
         <Link
           className="text-sm underline underline-offset-4"
           to="/finance/categories"

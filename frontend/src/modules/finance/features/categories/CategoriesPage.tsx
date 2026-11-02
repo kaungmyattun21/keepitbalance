@@ -31,7 +31,7 @@ export function CategoriesPage() {
           {returnLabel}
         </Link>
       </Button>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">Manage categories</h2>
         <Button onClick={() => setAdding(true)}>Add group</Button>
       </div>

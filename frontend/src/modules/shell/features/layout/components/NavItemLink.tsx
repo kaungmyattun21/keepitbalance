@@ -10,15 +10,16 @@ type NavItemLinkProps = {
 };
 
 const layoutClasses: Record<NavItemVariant, string> = {
-  sidebar: "h-9 gap-3 rounded-lg px-3 text-sm",
-  compact: "size-10 justify-center rounded-lg",
-  bottom: "min-h-14 flex-1 flex-col justify-center gap-1 rounded-lg pt-2 pb-1.5 text-[0.7rem] font-medium",
+  sidebar: "h-10 gap-3 rounded-xl px-3 text-sm",
+  compact: "size-10 justify-center rounded-xl",
+  bottom:
+    "min-h-16 min-w-0 flex-1 flex-col justify-center gap-1 rounded-xl px-1 py-1 text-[0.6875rem] font-medium",
 };
 
 const activeClasses: Record<NavItemVariant, string> = {
-  sidebar: "bg-sidebar-accent font-medium text-foreground shadow-xs ring-1 ring-sidebar-border",
-  compact: "bg-sidebar-accent text-foreground shadow-xs ring-1 ring-sidebar-border",
-  bottom: "text-foreground",
+  sidebar: "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+  compact: "bg-sidebar-accent text-sidebar-accent-foreground",
+  bottom: "text-brand",
 };
 
 const idleClasses: Record<NavItemVariant, string> = {
@@ -40,13 +41,19 @@ export function NavItemLink({ item, variant }: NavItemLinkProps) {
       <span
         className={cn(
           "flex items-center justify-center",
-          variant === "bottom" && "h-7 w-12 rounded-full transition-colors",
-          variant === "bottom" && isActive && "bg-brand-subtle",
+          variant === "bottom" && "h-8 w-12 rounded-xl transition-colors",
+          variant === "bottom" && isActive && "bg-sidebar-accent",
         )}
       >
-        <Icon className={cn("size-4 shrink-0", isActive && "text-brand")} aria-hidden />
+        <Icon
+          className={cn("shrink-0", variant === "bottom" ? "size-5" : "size-4", isActive && "text-brand")}
+          strokeWidth={isActive ? 2.25 : 1.75}
+          aria-hidden
+        />
       </span>
-      <span className={cn(hideLabel && "sr-only")}>{label}</span>
+      <span className={cn(variant === "bottom" && "max-w-full truncate", hideLabel && "sr-only")}>
+        {label}
+      </span>
       {comingSoon && (
         <>
           <span className="sr-only">(coming soon)</span>

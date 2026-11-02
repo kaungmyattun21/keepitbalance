@@ -9,6 +9,10 @@ export function useApplyTheme() {
     const apply = () => {
       const dark = theme === "dark" || (theme === "system" && prefersDark.matches);
       document.documentElement.classList.toggle("dark", dark);
+      // Match mobile browser chrome to the selected app theme, including manual overrides.
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", dark ? "#040a17" : "#f7f9fa");
     };
 
     apply();

@@ -17,8 +17,13 @@ export function ShoppingItemPrice({
   const error = form.formState.errors.price?.message ?? form.formState.errors.root?.message;
   const field = form.register("price");
   return (
-    <form noValidate aria-label={`Price for ${item.ingredient.name}`} className="w-28" onSubmit={save}>
-      <label htmlFor={id} className="mb-1 block text-xs text-muted-foreground">
+    <form
+      noValidate
+      aria-label={`Price for ${item.ingredient.name}`}
+      className="w-full max-w-32 min-w-0"
+      onSubmit={save}
+    >
+      <label htmlFor={id} className="mb-1 block text-xs text-muted-foreground sm:sr-only">
         Total price
         <span className="sr-only"> for {item.ingredient.name}</span>
       </label>
@@ -27,7 +32,8 @@ export function ShoppingItemPrice({
         id={id}
         inputMode="decimal"
         aria-label={`Total price for ${item.ingredient.name}`}
-        placeholder="Not entered"
+        placeholder="—"
+        className="h-10 rounded-lg border-transparent bg-muted/40 text-right font-medium tabular-nums shadow-none hover:border-border focus-visible:border-ring dark:bg-muted/40"
         disabled={disabled}
         readOnly={pending}
         aria-invalid={Boolean(error)}

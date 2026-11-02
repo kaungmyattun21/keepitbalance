@@ -1,4 +1,5 @@
 import type { Prisma } from "../../../../generated/prisma/client.ts";
+import { withGroceryWrite } from "../../shared/transaction.ts";
 import { prisma } from "../../../../shared/db.ts";
 import { listInclude, type ListRow } from "../../shared/response.ts";
 
@@ -25,14 +26,16 @@ export async function current(userId: string) {
   return { data, defaultCategoryId: category?.id ?? null };
 }
 export function create(userId: string, weekStart: Date) {
-  return prisma.shoppingList.create({ data: { userId, weekStart }, include: listInclude });
+  return withGroceryWrite(userId, (tx) =>
+    tx.shoppingList.create({ data: { userId, weekStart }, include: listInclude }),
+  );
 }
 export function withLockedList<T>(
   userId: string,
   id: string,
   action: (tx: Prisma.TransactionClient, list: ListRow | null) => Promise<T>,
 ) {
-  return prisma.$transaction(async (tx) => {
+  return withGroceryWrite(userId, async (tx) => {
     await tx.$queryRaw`SELECT id FROM shopping_lists WHERE id = ${id}::uuid AND user_id = ${userId}::uuid FOR UPDATE`;
     return action(tx, await tx.shoppingList.findFirst({ where: { id, userId }, include: listInclude }));
   });

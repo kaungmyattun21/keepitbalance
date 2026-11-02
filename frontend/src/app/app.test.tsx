@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { todayIn } from "@keepitbalance/shared/dates";
 import { api, setUnauthorizedHandler } from "@/shared/lib/api";
 import { queryClient } from "@/shared/lib/query-client";
 import { createFetchMock, json } from "@/shared/test/fetch-mock";
@@ -152,5 +153,153 @@ describe("session expiry", () => {
       "/somewhere?month=2026-09",
     );
     expect(queryClient.getQueryData(["finance", "transactions"])).toBeUndefined();
+  });
+});
+
+describe("quick transaction log", () => {
+  const expenseId = "11111111-1111-4111-8111-111111111111";
+  const incomeId = "22222222-2222-4222-8222-222222222222";
+  const categories = [
+    { id: expenseId, name: "Groceries", type: "expense", groupId: "33333333-3333-4333-8333-333333333333" },
+    { id: incomeId, name: "Salary", type: "income", groupId: "44444444-4444-4444-8444-444444444444" },
+  ];
+  const groups = categories.map((category) => ({
+    id: category.groupId,
+    name: category.type === "expense" ? "Essentials" : "Income",
+    type: category.type,
+    categories: [category],
+  }));
+  function savedTransaction(values: Record<string, unknown>) {
+    return {
+      id: "transaction-1",
+      ...values,
+      category: categories.find((category) => category.id === values.categoryId),
+      shoppingListId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  beforeEach(() => {
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
+    server.on("GET /api/v1/category-groups", () => json(200, { data: groups }));
+    server.on("POST /api/v1/transactions", async (request) =>
+      json(201, savedTransaction(await request.json())),
+    );
+  });
+  async function openLog() {
+    await screen.findByRole("heading", { name: "Dashboard" });
+    const nav = within(document.querySelector('[data-slot="bottom-navigation"]') as HTMLElement);
+    const trigger = nav.getByRole("button", { name: "Log transaction" });
+    await userEvent.click(trigger);
+    const drawer = within(await screen.findByRole("dialog", { name: "Log transaction" }));
+    await drawer.findByRole("group", { name: "Amount keypad" });
+    return { drawer, trigger };
+  }
+  async function chooseCategory(option: string) {
+    await userEvent.click(screen.getByLabelText("Category"));
+    await userEvent.click(await screen.findByRole("option", { name: option }));
+  }
+  it("logs from the center button without leaving the screen and refreshes finance totals", async () => {
+    const router = renderAt("/");
+    await screen.findByRole("heading", { name: "Dashboard" });
+    expect(server.calls("GET /api/v1/category-groups")).toHaveLength(0);
+    const nav = within(document.querySelector('[data-slot="bottom-navigation"]') as HTMLElement);
+    const plus = nav.getByRole("button", { name: "Log transaction" });
+    expect(
+      nav.getByRole("link", { name: "Finance" }).compareDocumentPosition(plus) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      plus.compareDocumentPosition(nav.getByRole("link", { name: "Groceries" })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    queryClient.setQueryData(["finance", "budgets", "2026-10"], {});
+    queryClient.setQueryData(["finance", "transactions", "summary", "2026-10"], {});
+    const { drawer, trigger } = await openLog();
+    for (const key of ["1", "2", "3", "Decimal point", "4", "5", "Delete last digit", "5"])
+      await userEvent.click(drawer.getByRole("button", { name: key }));
+    expect((drawer.getByLabelText("Amount") as HTMLInputElement).value).toBe("123.45");
+    await chooseCategory("Groceries");
+    await userEvent.click(drawer.getByRole("button", { name: "Add note" }));
+    await userEvent.type(drawer.getByLabelText("Note"), "Market trip");
+    expect(drawer.queryByRole("group", { name: "Amount keypad" })).toBeNull();
+    await userEvent.click(drawer.getByRole("button", { name: "Show keypad" }));
+    expect(drawer.getByRole("group", { name: "Amount keypad" })).toBeTruthy();
+
+    await userEvent.click(drawer.getByRole("button", { name: "Save expense" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Log transaction" })).toBeNull());
+    expect(await server.calls("POST /api/v1/transactions")[0]!.json()).toEqual({
+      type: "expense",
+      amount: "123.45",
+      date: todayIn("Asia/Yangon"),
+      categoryId: expenseId,
+      note: "Market trip",
+    });
+    expect(router.state.location.pathname).toBe("/");
+    expect(queryClient.getQueryState(["finance", "budgets", "2026-10"])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(["finance", "transactions", "summary", "2026-10"])?.isInvalidated).toBe(
+      true,
+    );
+    expect(document.activeElement).toBe(trigger);
+  });
+  it("validates, switches category type, accepts keyboard input, and keeps a failed draft for retry", async () => {
+    renderAt("/");
+    const { drawer } = await openLog();
+    await userEvent.click(drawer.getByRole("button", { name: "Save expense" }));
+    expect(server.calls("POST /api/v1/transactions")).toHaveLength(0);
+    expect(await drawer.findByText("Choose a category.")).toBeTruthy();
+    await userEvent.click(drawer.getByLabelText("Amount"));
+    await userEvent.keyboard("42.");
+    await chooseCategory("Groceries");
+    await userEvent.click(drawer.getByRole("radio", { name: "Income" }));
+    expect(drawer.getByLabelText("Category").textContent).toBe("Choose a category");
+    await chooseCategory("Salary");
+    server.on("POST /api/v1/transactions", () =>
+      json(500, { error: { code: "INTERNAL_ERROR", message: "Couldn't save this transaction." } }),
+    );
+    await userEvent.click(drawer.getByRole("button", { name: "Save income" }));
+    expect(await drawer.findByText("Couldn't save this transaction.")).toBeTruthy();
+    expect((drawer.getByLabelText("Amount") as HTMLInputElement).value).toBe("42");
+    expect(drawer.getByLabelText("Category").textContent).toBe("Salary");
+    let finish: (() => void) | undefined;
+    server.on("POST /api/v1/transactions", async (request) => {
+      const values = await request.json();
+      return new Promise<Response>((resolve) => {
+        finish = () => resolve(json(201, savedTransaction(values)));
+      });
+    });
+    await userEvent.click(drawer.getByRole("button", { name: "Save income" }));
+    await waitFor(() => expect(finish).toBeTypeOf("function"));
+    expect((drawer.getByRole("button", { name: "Saving…" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((drawer.getByRole("button", { name: "1" }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => finish!());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Log transaction" })).toBeNull());
+    expect(await server.calls("POST /api/v1/transactions")[1]!.json()).toMatchObject({
+      type: "income",
+      amount: "42.00",
+      categoryId: incomeId,
+    });
+  });
+  it("shows a local retry when categories fail to load and resets after dismissal", async () => {
+    server.on("GET /api/v1/category-groups", () =>
+      json(404, { error: { code: "NOT_FOUND", message: "Unavailable" } }),
+    );
+    renderAt("/");
+    await screen.findByRole("heading", { name: "Dashboard" });
+    const nav = within(document.querySelector('[data-slot="bottom-navigation"]') as HTMLElement);
+    await userEvent.click(nav.getByRole("button", { name: "Log transaction" }));
+    const drawer = within(await screen.findByRole("dialog", { name: "Log transaction" }));
+    expect(await drawer.findByText("Couldn't load categories. Please try again.")).toBeTruthy();
+    server.on("GET /api/v1/category-groups", () => json(200, { data: groups }));
+    await userEvent.click(drawer.getByRole("button", { name: "Retry" }));
+    await drawer.findByRole("group", { name: "Amount keypad" });
+    await userEvent.click(drawer.getByRole("button", { name: "9" }));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Log transaction" })).toBeNull());
+    const reopened = await openLog();
+    expect((reopened.drawer.getByLabelText("Amount") as HTMLInputElement).value).toBe("");
+    expect(server.calls("POST /api/v1/transactions")).toHaveLength(0);
   });
 });

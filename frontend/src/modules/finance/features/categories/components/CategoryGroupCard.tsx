@@ -63,7 +63,7 @@ export function CategoryGroupCard({ group, groups }: { group: CategoryGroup; gro
               />
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium">{category.name}</span>
+                <span className="min-w-0 flex-1 font-medium wrap-anywhere">{category.name}</span>
                 <div className="flex gap-2">
                   <Button
                     size="sm"

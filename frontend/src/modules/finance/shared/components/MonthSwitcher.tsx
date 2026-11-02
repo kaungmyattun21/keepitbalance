@@ -10,7 +10,7 @@ type MonthSwitcherProps = {
 
 export function MonthSwitcher({ month, onMonthChange }: MonthSwitcherProps) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex w-full max-w-full min-w-0 items-center justify-between gap-1 sm:w-auto sm:justify-start">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -19,7 +19,10 @@ export function MonthSwitcher({ month, onMonthChange }: MonthSwitcherProps) {
       >
         <ChevronLeft />
       </Button>
-      <p aria-live="polite" className="min-w-28 text-center text-sm font-medium tabular-nums">
+      <p
+        aria-live="polite"
+        className="min-w-0 flex-1 text-center text-sm font-medium tabular-nums sm:min-w-28 sm:flex-none"
+      >
         {formatMonth(month)}
       </p>
       <Button

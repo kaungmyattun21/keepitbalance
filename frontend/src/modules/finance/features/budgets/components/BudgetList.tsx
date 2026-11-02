@@ -22,8 +22,8 @@ export function BudgetList({ monthlyBudgets, onMonthChange }: BudgetListProps) {
       <ul className="flex flex-col gap-6">
         {monthlyBudgets.groups.map((entry) => (
           <li key={entry.group.id}>
-            <details open className="rounded-lg border p-4">
-              <summary className="cursor-pointer font-semibold">
+            <details open className="rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5">
+              <summary className="cursor-pointer text-sm font-medium wrap-anywhere">
                 {entry.group.name}
                 <span className="mt-1 block text-sm font-normal text-muted-foreground tabular-nums">
                   {formatMoney(entry.spent)} spent of {formatMoney(entry.amount)} ·{" "}

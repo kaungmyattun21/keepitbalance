@@ -1,3 +1,4 @@
+import { Package, Pencil, Plus, SlidersHorizontal, X } from "lucide-react";
 import { useState } from "react";
 import type { PantryItem } from "@keepitbalance/shared/groceries";
 import { DocumentTitle } from "@/shared/components/DocumentTitle";
@@ -21,54 +22,67 @@ export function PantryPage() {
       <DocumentTitle title="Pantry" />
       <SectionCard
         title="Your pantry"
-        description="Track current stock. Purchased items are added here when you finish shopping."
-        action={<Button onClick={() => setEditor("new")}>Add pantry item</Button>}
+        description="A clear view of what you have on hand."
+        action={
+          <Button className="rounded-full px-4" onClick={() => setEditor("new")}>
+            <Plus className="size-4" aria-hidden />
+            Add pantry item
+          </Button>
+        }
       >
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Your pantry is empty. Add what you already have, or finish a shopping list to stock it.
-          </p>
+          <div className="flex flex-col items-center gap-3 py-14 text-center">
+            <Package className="mb-1 size-8 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Your pantry is empty. Add what you already have, or finish a shopping list to stock it.
+            </p>
+          </div>
         ) : (
-          <ul className="divide-y">
+          <ul className="divide-y divide-border/60">
             {items.map((item) => (
-              <li
-                key={item.id}
-                className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"
-              >
-                <div>
-                  <h3 className="font-medium">{item.ingredient.name}</h3>
+              <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-5">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-medium wrap-break-word">{item.ingredient.name}</h3>
                   <p
                     className={
-                      item.quantity === "0.00" ? "text-sm text-destructive" : "text-sm text-muted-foreground"
+                      item.quantity === "0.00"
+                        ? "mt-1 text-xs text-destructive"
+                        : "mt-1 text-xs text-muted-foreground tabular-nums"
                     }
                   >
                     {item.quantity === "0.00" ? "Out of stock" : `${item.quantity} ${item.ingredient.unit}`}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1">
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="ghost"
+                    className="rounded-full text-muted-foreground hover:text-foreground"
                     aria-label={`Adjust ${item.ingredient.name}`}
                     onClick={() => setAdjusting(item)}
                   >
+                    <SlidersHorizontal className="size-3.5" aria-hidden />
                     Adjust stock
                   </Button>
                   <Button
-                    size="sm"
+                    size="icon-sm"
                     variant="ghost"
+                    className="rounded-full text-muted-foreground hover:text-foreground"
+                    title="Edit stock"
                     aria-label={`Edit ${item.ingredient.name}`}
                     onClick={() => setEditor(item)}
                   >
-                    Edit
+                    <Pencil className="size-3.5" aria-hidden />
                   </Button>
                   <Button
-                    size="sm"
+                    size="icon-sm"
                     variant="ghost"
+                    className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    title="Remove from pantry"
                     aria-label={`Remove ${item.ingredient.name}`}
                     onClick={() => setRemoving(item)}
                   >
-                    Remove
+                    <X className="size-4" aria-hidden />
                   </Button>
                 </div>
               </li>

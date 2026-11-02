@@ -289,9 +289,19 @@ model Recipe {
   user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   ingredients     RecipeIngredient[]
   mealPlanEntries MealPlanEntry[]
+  image           RecipeImage?
 
   @@index([userId])
   @@map("recipes")
+}
+
+model RecipeImage {
+  recipeId    String @id @map("recipe_id") @db.Uuid
+  contentType String @map("content_type")
+  data        Bytes
+  recipe      Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_images")
 }
 
 // Join table: which ingredients a recipe needs (quantity is for the recipe's full servings).

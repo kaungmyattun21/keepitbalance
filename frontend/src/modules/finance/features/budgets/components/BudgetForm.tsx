@@ -57,11 +57,11 @@ export function BudgetForm({ mode, onDismiss, ...options }: BudgetFormProps) {
                     return (
                       <li
                         key={field.id}
-                        className="grid grid-cols-[minmax(0,1fr)_9.5rem] items-start gap-3 py-3"
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,7rem)] items-start gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_9.5rem]"
                       >
                         <label
                           htmlFor={checkboxId}
-                          className="flex min-h-9 cursor-pointer items-center gap-3"
+                          className="flex min-h-9 min-w-0 cursor-pointer items-center gap-3"
                         >
                           <input
                             id={checkboxId}
@@ -70,7 +70,12 @@ export function BudgetForm({ mode, onDismiss, ...options }: BudgetFormProps) {
                             checked={selected}
                             onChange={(event) => selectRow(index, event.target.checked)}
                           />
-                          <span className={cn("truncate font-medium", !selected && "text-muted-foreground")}>
+                          <span
+                            className={cn(
+                              "min-w-0 font-medium wrap-anywhere",
+                              !selected && "text-muted-foreground",
+                            )}
+                          >
                             {field.categoryName}
                           </span>
                         </label>

@@ -27,7 +27,8 @@ function toAppError(err: unknown): AppError {
 
   if (err instanceof Error && "type" in err) {
     if (err.type === "entity.too.large") {
-      return new AppError(413, "PAYLOAD_TOO_LARGE", "Request body must not exceed 100 KiB");
+      const limit = "limit" in err && typeof err.limit === "number" ? err.limit / 1024 : 100;
+      return new AppError(413, "PAYLOAD_TOO_LARGE", `Request body must not exceed ${limit} KiB`);
     }
     if (err.type === "encoding.unsupported" || err.type === "charset.unsupported") {
       return new AppError(415, "UNSUPPORTED_MEDIA_TYPE", "Unsupported request encoding");

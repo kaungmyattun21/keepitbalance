@@ -14,6 +14,9 @@ function ThemeHarness() {
 const isDark = () => document.documentElement.classList.contains("dark");
 
 beforeEach(() => {
+  const color = document.createElement("meta");
+  color.name = "theme-color";
+  document.head.append(color);
   vi.stubGlobal(
     "matchMedia",
     vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
@@ -26,6 +29,7 @@ afterEach(() => {
   localStorage.clear();
   useThemeStore.setState({ theme: "dark" });
   document.documentElement.classList.remove("dark");
+  document.querySelector('meta[name="theme-color"]')?.remove();
 });
 
 it("starts dark, cycles dark → system → light, applies it, and remembers it", async () => {
@@ -34,10 +38,12 @@ it("starts dark, cycles dark → system → light, applies it, and remembers it"
 
   expect(useThemeStore.getState().theme).toBe("dark");
   expect(isDark()).toBe(true);
+  expect(document.querySelector('meta[name="theme-color"]')?.getAttribute("content")).toBe("#040a17");
 
   await toggle();
   expect(useThemeStore.getState().theme).toBe("system");
   expect(isDark()).toBe(false);
+  expect(document.querySelector('meta[name="theme-color"]')?.getAttribute("content")).toBe("#f7f9fa");
 
   await toggle();
   expect(useThemeStore.getState().theme).toBe("light");

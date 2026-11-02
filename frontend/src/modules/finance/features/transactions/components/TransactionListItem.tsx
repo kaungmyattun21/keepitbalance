@@ -19,41 +19,46 @@ export function TransactionListItem({ transaction, onEdit, onDelete }: Transacti
   const TypeIcon = isIncome ? ArrowDownLeft : ArrowUpRight;
 
   return (
-    <li className="flex items-center gap-3 py-3">
+    <li className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-4 @lg/section:flex @lg/section:gap-3">
       <span
         aria-hidden
         className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-full",
-          isIncome ? "bg-brand-subtle text-brand" : "bg-expense-subtle text-expense",
+          "row-span-2 flex size-9 shrink-0 items-center justify-center rounded-xl",
+          isIncome ? "bg-brand-subtle/60 text-brand" : "bg-muted text-muted-foreground",
         )}
       >
         <TypeIcon className="size-4" />
       </span>
 
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate font-medium">
-          {transaction.category.name}
+      <div className="col-start-2 min-w-0 flex-1">
+        <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+          <span className="min-w-0 truncate">{transaction.category.name}</span>
           {isShoppingExpense && (
             <ShoppingBasket
               role="img"
               aria-label="From a shopping list"
-              className="size-3.5 text-muted-foreground"
+              className="size-3.5 shrink-0 text-muted-foreground"
             />
           )}
         </p>
-        <p className="truncate text-sm text-muted-foreground">
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {formattedDate}
           {transaction.note && ` · ${transaction.note}`}
         </p>
       </div>
 
-      <p className={cn("shrink-0 font-semibold tabular-nums", isIncome ? "text-brand" : "text-expense")}>
+      <p
+        className={cn(
+          "col-start-2 row-start-2 min-w-0 text-sm font-medium wrap-anywhere tabular-nums @lg/section:shrink-0",
+          isIncome ? "text-brand" : "text-foreground",
+        )}
+      >
         <span className="sr-only">{isIncome ? "Income" : "Expense"} </span>
         <span aria-hidden>{isIncome ? "+" : "−"}</span>
         {formattedAmount}
       </p>
 
-      <div className="flex shrink-0 items-center">
+      <div className="col-start-3 row-span-2 row-start-1 flex shrink-0 items-center">
         <Button
           variant="ghost"
           size="icon-sm"
