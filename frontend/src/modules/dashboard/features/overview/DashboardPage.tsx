@@ -41,7 +41,7 @@ export function DashboardPage() {
         </ul>
       </section>
 
-      <p className="flex items-center gap-2 border-t border-border/60 pt-5 text-xs text-muted-foreground">
+      <p className="flex items-center gap-2 pt-5 text-xs text-muted-foreground">
         <span
           aria-hidden
           className={cn("size-1.5 rounded-full", apiHealthy ? "bg-brand" : "bg-destructive")}

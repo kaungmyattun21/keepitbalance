@@ -22,7 +22,62 @@ export const transactionTypeSchema = z.enum(
 
 export type TransactionType = z.infer<typeof transactionTypeSchema>;
 
-export type Category = { id: string; name: string; type: TransactionType; groupId: string };
+export const categoryIcons = [
+  "home",
+  "grocery",
+  "transport",
+  "dining",
+  "coffee",
+  "health",
+  "education",
+  "travel",
+  "gift",
+  "salary",
+  "wallet",
+  "card",
+  "phone",
+  "utilities",
+  "clothing",
+  "pets",
+  "entertainment",
+  "fitness",
+  "savings",
+  "maintenance",
+  "music",
+  "shopping",
+  "baby",
+  "beauty",
+  "insurance",
+  "taxes",
+  "investments",
+  "bank",
+  "cash",
+  "subscriptions",
+  "internet",
+  "water",
+  "fuel",
+  "parking",
+  "bicycle",
+  "bus",
+  "train",
+  "books",
+  "movies",
+  "photography",
+  "computer",
+  "charity",
+  "garden",
+  "laundry",
+  "snacks",
+] as const;
+export const categoryIconSchema = z.enum(categoryIcons);
+export type CategoryIconName = z.output<typeof categoryIconSchema>;
+export type Category = {
+  id: string;
+  name: string;
+  type: TransactionType;
+  groupId: string;
+  icon: string | null;
+};
 
 export type CategoryGroup = {
   id: string;
@@ -42,10 +97,14 @@ export const updateCategoryGroupSchema = z.object({ name: categoryNameSchema });
 export const createCategorySchema = z.object({
   name: categoryNameSchema,
   groupId: z.uuid("Choose a group."),
+  icon: categoryIconSchema.nullable().optional(),
 });
 export const updateCategorySchema = createCategorySchema
   .partial()
-  .refine((value) => value.name !== undefined || value.groupId !== undefined, "Provide a name or group.");
+  .refine(
+    (value) => value.name !== undefined || value.groupId !== undefined || value.icon !== undefined,
+    "Provide a name, group or icon.",
+  );
 export type CreateCategoryGroupValues = z.output<typeof createCategoryGroupSchema>;
 export type UpdateCategoryGroupValues = z.output<typeof updateCategoryGroupSchema>;
 export type CreateCategoryValues = z.output<typeof createCategorySchema>;
@@ -91,6 +150,7 @@ export type TransactionSummaryQuery = z.output<typeof transactionSummaryQuerySch
 
 export type CategoryTotal = {
   categoryId: string;
+  icon: string | null;
   name: string;
   type: TransactionType;
   total: string;

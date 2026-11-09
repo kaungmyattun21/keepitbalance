@@ -100,7 +100,7 @@ export async function createCategory(userId: string, input: CreateCategoryValues
   const group = await requireGroup(userId, input.groupId);
   return categoryResponse(
     await mutate(
-      () => repository.createCategory(userId, input.name, group.id, group.type),
+      () => repository.createCategory(userId, input.name, group.id, group.type, input.icon),
       "CATEGORY_TYPE_MISMATCH",
     ),
   );

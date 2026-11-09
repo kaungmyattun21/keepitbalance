@@ -24,7 +24,7 @@ export function ShoppingItemsBatchForm({ listId, onClose }: { listId: string; on
         Add up to {GROCERY_BATCH_MAX} items and save together. Repeated ingredients combine quantities and are
         marked as not purchased for review.
       </p>
-      <div className="rounded-lg border">
+      <div className="rounded-xl bg-muted/20">
         <div
           aria-hidden="true"
           className="grid grid-cols-[minmax(0,1fr)_5.5rem_2rem] gap-2 rounded-t-lg bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground"
@@ -37,7 +37,7 @@ export function ShoppingItemsBatchForm({ listId, onClose }: { listId: string; on
           return (
             <fieldset
               key={field.id}
-              className="grid min-w-0 grid-cols-[minmax(0,1fr)_5.5rem_2rem] items-start gap-2 border-t p-3 [&_[data-slot=field-label]]:sr-only"
+              className="grid min-w-0 grid-cols-[minmax(0,1fr)_5.5rem_2rem] items-start gap-2 p-3 [&_[data-slot=field-label]]:sr-only"
             >
               <legend className="sr-only">Item {index + 1}</legend>
               <IngredientPicker

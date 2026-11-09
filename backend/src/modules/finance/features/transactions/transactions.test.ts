@@ -41,7 +41,13 @@ describe("POST /api/v1/transactions", () => {
       amount: "42.50",
       date: "2026-09-27",
       note: "Weekly shop",
-      category: { groupId: expect.any(String), id: body.categoryId, name: "Groceries", type: "expense" },
+      category: {
+        icon: null,
+        groupId: expect.any(String),
+        id: body.categoryId,
+        name: "Groceries",
+        type: "expense",
+      },
       shoppingListId: null,
       createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
@@ -271,7 +277,7 @@ describe("PUT /api/v1/transactions/:id", () => {
       amount: "2500.00",
       date: "2026-09-30",
       note: "September salary",
-      category: { groupId: salary.groupId, id: salary.id, name: "Salary", type: "income" },
+      category: { icon: null, groupId: salary.groupId, id: salary.id, name: "Salary", type: "income" },
       createdAt: original.createdAt,
     });
   });
@@ -412,9 +418,9 @@ describe("GET /api/v1/transactions/summary", () => {
       totalExpense: "45.80",
       net: "2954.20",
       byCategory: [
-        { categoryId: expect.any(String), name: "Salary", type: "income", total: "3000.00" },
-        { categoryId: transport.id, name: "Transport", type: "expense", total: "45.50" },
-        { categoryId: expect.any(String), name: "Groceries", type: "expense", total: "0.30" },
+        { categoryId: expect.any(String), name: "Salary", icon: null, type: "income", total: "3000.00" },
+        { categoryId: transport.id, name: "Transport", icon: null, type: "expense", total: "45.50" },
+        { categoryId: expect.any(String), name: "Groceries", icon: null, type: "expense", total: "0.30" },
       ],
     });
   });

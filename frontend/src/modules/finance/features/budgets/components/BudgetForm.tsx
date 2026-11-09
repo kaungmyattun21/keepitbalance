@@ -1,3 +1,4 @@
+import { CategoryIcon } from "../../../shared/components/CategoryIcon";
 import { useId } from "react";
 import { Controller } from "react-hook-form";
 import { FormAlert } from "@/shared/components/form/FormAlert";
@@ -30,6 +31,11 @@ export function BudgetForm({ mode, onDismiss, ...options }: BudgetFormProps) {
     handleSubmit,
   } = useBudgetForm(options);
   const { isSubmitting } = form.formState;
+  const iconByCategoryId = new Map(
+    options.expenseGroups.flatMap((group) =>
+      group.categories.map((category) => [category.id, category.icon] as const),
+    ),
+  );
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
@@ -48,7 +54,7 @@ export function BudgetForm({ mode, onDismiss, ...options }: BudgetFormProps) {
                 {group.indices.length === 0 && (
                   <p className="text-sm text-muted-foreground">No categories in this group yet.</p>
                 )}
-                <ul className="divide-y">
+                <ul className="space-y-1">
                   {group.indices.map((index) => {
                     const field = fields[index]!;
                     const selected = rows[index]?.selected ?? false;
@@ -70,6 +76,7 @@ export function BudgetForm({ mode, onDismiss, ...options }: BudgetFormProps) {
                             checked={selected}
                             onChange={(event) => selectRow(index, event.target.checked)}
                           />
+                          <CategoryIcon icon={iconByCategoryId.get(field.categoryId)} />
                           <span
                             className={cn(
                               "min-w-0 font-medium wrap-anywhere",
@@ -107,7 +114,7 @@ export function BudgetForm({ mode, onDismiss, ...options }: BudgetFormProps) {
           </div>
         )}
       </div>
-      <div className="flex shrink-0 flex-col gap-4 border-t bg-popover px-6 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <div className="flex shrink-0 flex-col gap-4 bg-popover px-6 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {selectedCount === 0 ? (
             "No categories selected."

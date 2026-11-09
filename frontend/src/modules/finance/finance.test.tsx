@@ -16,18 +16,21 @@ import { sessionFixture } from "@/shared/test/session-fixture";
 import { financeRoute, lazyTransactionsPage } from "./index.ts";
 
 const groceries: Category = {
+  icon: null,
   id: "11111111-1111-4111-8111-111111111111",
   groupId: "44444444-4444-4444-8444-444444444444",
   name: "Groceries",
   type: "expense",
 };
 const transport: Category = {
+  icon: null,
   id: "22222222-2222-4222-8222-222222222222",
   groupId: "44444444-4444-4444-8444-444444444444",
   name: "Transport",
   type: "expense",
 };
 const salary: Category = {
+  icon: null,
   id: "33333333-3333-4333-8333-333333333333",
   name: "Salary",
   type: "income",
@@ -145,6 +148,9 @@ beforeEach(() => {
     }),
   );
   server.on("GET /api/v1/bills", () => json(200, { data: [] }));
+  server.on("GET /api/v1/receipts", () =>
+    json(200, { data: [], page: 1, pageSize: 5, total: 0, totalPages: 0 }),
+  );
   server.on("GET /api/v1/categories", () => json(200, { data: [salary, groceries, transport] }));
   server.on("GET /api/v1/transactions", () =>
     json(200, {
@@ -380,6 +386,25 @@ describe("transaction list", () => {
 });
 
 describe("finance sections", () => {
+  it("opens finance pages from overview cards and preserves the selected month", async () => {
+    renderFinance("/finance?month=2026-09");
+    const shortcuts = within(await screen.findByRole("navigation", { name: "Finance shortcuts" }));
+    expect(shortcuts.getByRole("link", { name: "Transactions" }).getAttribute("href")).toBe(
+      "/finance/transactions?month=2026-09",
+    );
+    expect(shortcuts.getByRole("link", { name: "Budgets" }).getAttribute("href")).toBe(
+      "/finance/budgets?month=2026-09",
+    );
+    expect(shortcuts.getByRole("link", { name: "Bills" }).getAttribute("href")).toBe("/finance/bills");
+    await userEvent.click(shortcuts.getByRole("link", { name: "Transactions" }));
+    expect(await screen.findByRole("region", { name: "Transactions" })).toBeTruthy();
+    const back = await screen.findByRole("link", { name: "Finance overview" });
+    expect(back.getAttribute("href")).toBe("/finance?month=2026-09");
+    await userEvent.click(back);
+    expect(await screen.findByRole("region", { name: "Monthly balance" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Finance shortcuts" })).toBeTruthy();
+  });
+
   it("opens on the overview with this month's totals and category breakdown", async () => {
     server.on("GET /api/v1/transactions/summary", () =>
       json(200, {
@@ -388,9 +413,9 @@ describe("finance sections", () => {
         totalExpense: "3250.50",
         net: "-250.50",
         byCategory: [
-          { categoryId: groceries.id, name: "Groceries", type: "expense", total: "3000.00" },
-          { categoryId: salary.id, name: "Salary", type: "income", total: "3000.00" },
-          { categoryId: transport.id, name: "Transport", type: "expense", total: "250.50" },
+          { categoryId: groceries.id, name: "Groceries", icon: null, type: "expense", total: "3000.00" },
+          { categoryId: salary.id, name: "Salary", icon: null, type: "income", total: "3000.00" },
+          { categoryId: transport.id, name: "Transport", icon: null, type: "expense", total: "250.50" },
         ],
       }),
     );
@@ -767,9 +792,52 @@ describe("category management", () => {
     expect(await lifestyle.findByText("Groceries")).toBeTruthy();
     expect(await server.calls(`PATCH /api/v1/categories/${groceries.id}`)[0]!.json()).toEqual({
       name: "Groceries",
+      icon: null,
       groupId: destinationId,
     });
     expect(queryClient.getQueryState(["finance", "budgets", thisMonth])?.isInvalidated).toBe(true);
+  });
+
+  it("chooses an optional category icon and clears it when editing", async () => {
+    let created: Category | null = null;
+    server.on("GET /api/v1/category-groups", () =>
+      json(200, {
+        data: [
+          {
+            id: groceries.groupId,
+            name: "Essentials",
+            type: "expense",
+            categories: [groceries, ...(created ? [created] : [])],
+          },
+        ],
+      }),
+    );
+    server.on("POST /api/v1/categories", async (request) => {
+      const values = (await request.json()) as Pick<Category, "name" | "groupId" | "icon">;
+      created = { ...values, id: "77777777-7777-4777-8777-777777777777", type: "expense" };
+      return json(201, created);
+    });
+    server.on("PATCH /api/v1/categories/77777777-7777-4777-8777-777777777777", async (request) => {
+      const values = (await request.json()) as Pick<Category, "name" | "groupId" | "icon">;
+      created = { ...created!, ...values };
+      return json(200, created);
+    });
+    renderFinance("/finance/categories");
+    const group = within(await screen.findByRole("region", { name: "Essentials" }));
+    await userEvent.click(group.getByRole("button", { name: "Add category" }));
+    expect(screen.getByRole("button", { name: "No icon" }).getAttribute("aria-pressed")).toBe("true");
+    await userEvent.type(screen.getByLabelText("Category name"), "Snacks");
+    await userEvent.click(screen.getByRole("button", { name: "Groceries icon" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save category" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Edit Snacks" }));
+    expect(screen.getByRole("button", { name: "Groceries icon" }).getAttribute("aria-pressed")).toBe("true");
+    expect(await server.calls("POST /api/v1/categories")[0]!.json()).toMatchObject({ icon: "grocery" });
+    await userEvent.click(screen.getByRole("button", { name: "No icon" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save category" }));
+    await waitFor(() => expect(screen.queryByLabelText("Category name")).toBeNull());
+    expect(
+      await server.calls("PATCH /api/v1/categories/77777777-7777-4777-8777-777777777777")[0]!.json(),
+    ).toMatchObject({ icon: null });
   });
 
   it("shows deletion errors and keeps categories in use", async () => {
@@ -821,6 +889,39 @@ describe("recurring bills", () => {
     expect(
       within(screen.getByRole("region", { name: "Upcoming" })).getByText("Future subscription"),
     ).toBeTruthy();
+  });
+
+  it("separates paid future bills from outstanding totals and shows previously paid bills when due again", async () => {
+    server.on("GET /api/v1/bills", () =>
+      json(200, {
+        data: [
+          billFixture({ name: "Paid subscription", nextDueDate: "2099-01-01", lastPaidDate: today }),
+          billFixture({
+            id: "88888888-8888-4888-8888-888888888888",
+            name: "Unpaid rent",
+            nextDueDate: "2099-01-02",
+          }),
+          billFixture({
+            id: "99999999-9999-4999-8999-999999999999",
+            name: "Due again",
+            lastPaidDate: "2020-01-01",
+          }),
+        ],
+      }),
+    );
+    renderFinance("/finance/bills");
+    const paid = within(await screen.findByRole("region", { name: "Paid" }));
+    expect(paid.getByText("Paid subscription")).toBeTruthy();
+    expect(paid.getByText(/1 bill paid · next payments scheduled/)).toBeTruthy();
+    expect(paid.queryByRole("button", { name: /Mark .* paid/ })).toBeNull();
+    const upcoming = within(screen.getByRole("region", { name: "Upcoming" }));
+    expect(upcoming.getByText("Unpaid rent")).toBeTruthy();
+    expect(upcoming.queryByText("Paid subscription")).toBeNull();
+    expect(upcoming.getByText(/^1 bill · .* due$/)).toBeTruthy();
+    const due = within(screen.getByRole("region", { name: "Due today" }));
+    expect(due.getByRole("button", { name: "Mark Due again paid" })).toBeTruthy();
+    expect(due.queryByLabelText(/^Last payment paid on /)).toBeNull();
+    expect(screen.queryByText("All bills paid for now")).toBeNull();
   });
 
   it("creates a bill in a side drawer with grouped expense categories", async () => {
@@ -900,9 +1001,12 @@ describe("recurring bills", () => {
       dueDate: today,
       updatedAt: bill.updatedAt,
     });
-    const upcoming = within(await screen.findByRole("region", { name: "Upcoming" }));
-    expect(upcoming.getByText("Paid")).toBeTruthy();
-    expect(upcoming.getByText(/^Last paid /)).toBeTruthy();
+    const paid = within(await screen.findByRole("region", { name: "Paid" }));
+    expect(paid.getByLabelText(/^Last payment paid on /)).toBeTruthy();
+    expect(paid.getByText(/^Last paid /)).toBeTruthy();
+    expect(paid.queryByRole("button", { name: "Mark Internet paid" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Upcoming" })).toBeNull();
+    expect(screen.getByText("All bills paid for now")).toBeTruthy();
     expect(queryClient.getQueryState(["finance", "budgets", thisMonth])?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(["finance", "transactions", "summary", thisMonth])?.isInvalidated).toBe(
       true,

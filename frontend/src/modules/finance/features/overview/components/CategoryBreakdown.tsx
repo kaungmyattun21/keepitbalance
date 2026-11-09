@@ -1,9 +1,9 @@
+import { categoryChartColor } from "../../../shared/category-chart-colors";
+import { CategoryIcon } from "../../../shared/components/CategoryIcon";
 import type { CategoryTotal } from "@keepitbalance/shared/finance";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { SectionCard } from "@/shared/components/SectionCard";
 import { formatMoney } from "@/shared/lib/format";
-
-const colors = ["bg-emerald-500", "bg-teal-400", "bg-cyan-600", "bg-slate-400", "bg-emerald-700"];
 
 type CategoryBreakdownProps = {
   title: string;
@@ -24,9 +24,9 @@ export function CategoryBreakdown({
   const categories = [...categoryTotals].sort((a, b) => Number(b.total) - Number(a.total));
   const Icon = tone === "income" ? ArrowDownLeft : ArrowUpRight;
   return (
-    <SectionCard title={title}>
+    <SectionCard title={title} compactHeader>
       {categories.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-8 text-center">
+        <div className="flex min-h-52 flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
           <span className="grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
             <Icon className="size-4" aria-hidden />
           </span>
@@ -41,25 +41,26 @@ export function CategoryBreakdown({
             {formatMoney(grandTotal)}
           </p>
           <div aria-hidden className="mt-5 mb-6 flex h-2.5 overflow-hidden rounded-full bg-muted">
-            {categories.map((category, index) => (
+            {categories.map((category) => (
               <span
                 key={category.categoryId}
-                className={colors[index % colors.length]}
+                className={categoryChartColor(category.icon, category.categoryId)}
                 style={{ width: `${total > 0 ? (Number(category.total) / total) * 100 : 0}%` }}
               />
             ))}
           </div>
-          <ul className="divide-y divide-border/60">
-            {categories.map((category, index) => (
+          <ul className="space-y-1">
+            {categories.map((category) => (
               <li
                 key={category.categoryId}
                 className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
               >
                 <span className="flex min-w-0 basis-28 items-center gap-2 text-sm">
                   <span
-                    className={`size-2 shrink-0 rounded-full ${colors[index % colors.length]}`}
+                    className={`size-2 shrink-0 rounded-full ${categoryChartColor(category.icon, category.categoryId)}`}
                     aria-hidden
                   />
+                  <CategoryIcon icon={category.icon} variant="plain" />
                   <span className="min-w-0 truncate font-medium" title={category.name}>
                     {category.name}
                   </span>

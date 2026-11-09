@@ -7,6 +7,7 @@ type SummaryInput = {
   month: string;
   categorySums: CategorySumRow[];
   categoryNames: Map<string, string>;
+  categoryIcons: Map<string, string | null>;
   typeFilter?: TransactionType;
 };
 
@@ -15,6 +16,7 @@ export function toTransactionSummary({
   month,
   categorySums,
   categoryNames,
+  categoryIcons,
   typeFilter,
 }: SummaryInput): TransactionSummary {
   let totalIncome = new Prisma.Decimal(0);
@@ -32,6 +34,7 @@ export function toTransactionSummary({
     .map(({ row, total }) => ({
       categoryId: row.categoryId,
       name: categoryNames.get(row.categoryId) ?? "Unknown category",
+      icon: categoryIcons.get(row.categoryId) ?? null,
       type: toApiType[row.type],
       total: total.toFixed(2),
     }))

@@ -1,3 +1,5 @@
+import { resolvePlanningPeriod, type PlanningPeriod } from "@keepitbalance/shared/meal-planning";
+import { formatCalendarDate } from "@/shared/lib/format";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router";
@@ -8,19 +10,20 @@ import { FormAlert } from "@/shared/components/form/FormAlert";
 import { generationQuery } from "../../../shared/planning-queries.ts";
 import { useGenerationMutation } from "../../../shared/use-planning-mutations.ts";
 import { groceryError } from "../../../shared/use-grocery-mutations.ts";
-export function GenerationPreview({ week, onClose }: { week: string; onClose: () => void }) {
-  const query = useQuery(generationQuery(week));
+export function GenerationPreview({ period, onClose }: { period: PlanningPeriod; onClose: () => void }) {
+  const { weekStart, startDate, endDate } = resolvePlanningPeriod(period);
+  const query = useQuery(generationQuery(period));
   const apply = useGenerationMutation();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const data = query.data;
   const additions = data?.rows.filter((row) => row.toAdd !== "0.00" && !row.blocked).length ?? 0;
-  const otherWeek = data?.listWeekStart && data.listWeekStart !== week;
+  const otherWeek = data?.listWeekStart && data.listWeekStart !== weekStart;
   async function save() {
     if (!data || query.isFetching || apply.isPending) return;
     setError(null);
     try {
-      const result = await apply.mutateAsync({ weekStart: week, token: data.token });
+      const result = await apply.mutateAsync({ ...period, token: data.token });
       toast.success(
         `${result.addedCount} shopping items updated.${result.reviewCount ? ` ${result.reviewCount} items need manual review.` : ""}`,
       );
@@ -52,6 +55,12 @@ export function GenerationPreview({ week, onClose }: { week: string; onClose: ()
           </p>
         ) : (
           <>
+            <p className="text-sm font-medium">
+              {formatCalendarDate(startDate)} – {formatCalendarDate(endDate)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Shopping list: week of {formatCalendarDate(weekStart)}.
+            </p>
             <p className="text-sm text-muted-foreground">
               {data.mealCount} remaining meals. Pantry stock and items already on your open list are deducted
               first.
@@ -69,9 +78,11 @@ export function GenerationPreview({ week, onClose }: { week: string; onClose: ()
               </p>
             )}
             {!data.rows.length && (
-              <p className="py-6 text-sm text-muted-foreground">No remaining meals to shop for this week.</p>
+              <p className="py-6 text-sm text-muted-foreground">
+                No remaining meals to shop for these dates.
+              </p>
             )}
-            <ul className="divide-y divide-border/60">
+            <ul className="space-y-1">
               {data.rows.map((row) => (
                 <li key={row.ingredient.id} className="py-4">
                   <p className="font-medium wrap-anywhere">
@@ -121,7 +132,7 @@ export function GenerationPreview({ week, onClose }: { week: string; onClose: ()
           </>
         )}
       </div>
-      <div className="flex flex-col-reverse gap-2 border-t border-border/60 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+      <div className="flex flex-col-reverse gap-2 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>

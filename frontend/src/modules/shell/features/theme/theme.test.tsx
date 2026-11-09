@@ -43,7 +43,7 @@ it("starts dark, cycles dark → system → light, applies it, and remembers it"
   await toggle();
   expect(useThemeStore.getState().theme).toBe("system");
   expect(isDark()).toBe(false);
-  expect(document.querySelector('meta[name="theme-color"]')?.getAttribute("content")).toBe("#f7f9fa");
+  expect(document.querySelector('meta[name="theme-color"]')?.getAttribute("content")).toBe("#f7f3eb");
 
   await toggle();
   expect(useThemeStore.getState().theme).toBe("light");

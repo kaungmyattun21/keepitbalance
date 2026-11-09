@@ -10,6 +10,7 @@ import {
   categoryGroupRoutes,
   createDefaultCategories,
   transactionRoutes,
+  receiptRoutes,
 } from "./modules/finance/index.ts";
 import {
   ingredientRoutes,
@@ -47,6 +48,7 @@ app.all("/api/v1/auth/*splat", text({ ...bodyOptions, type: () => true }), async
 
 // Recipe photos are base64-encoded; keep the larger allowance scoped to recipes.
 app.use("/api/v1/recipes", json({ ...bodyOptions, limit: "3mb" }));
+app.use("/api/v1/receipts", json({ ...bodyOptions, limit: "7mb" }));
 app.use(json(bodyOptions));
 
 const api = Router();
@@ -69,6 +71,7 @@ api.use("/shopping-lists", shoppingListRoutes);
 api.use("/categories", categoryRoutes);
 api.use("/category-groups", categoryGroupRoutes);
 api.use("/transactions", transactionRoutes);
+api.use("/receipts", receiptRoutes);
 
 app.use("/api/v1", api);
 

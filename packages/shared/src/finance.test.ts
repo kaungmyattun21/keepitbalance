@@ -233,3 +233,17 @@ describe("bill schemas", () => {
     ).toBe("10.00");
   });
 });
+
+describe("optional category icons", () => {
+  it("accepts a chosen icon, no icon, and icon-only edits", () => {
+    const category = { name: "Food", groupId: valid.categoryId };
+    expect(createCategorySchema.safeParse(category).success).toBe(true);
+    expect(createCategorySchema.parse({ ...category, icon: "grocery" }).icon).toBe("grocery");
+    expect(createCategorySchema.parse({ ...category, icon: null }).icon).toBeNull();
+    expect(updateCategorySchema.safeParse({ icon: "home" }).success).toBe(true);
+    expect(updateCategorySchema.safeParse({ icon: null }).success).toBe(true);
+    expect(createCategorySchema.safeParse({ ...category, icon: "unknown" }).success).toBe(false);
+    expect(updateCategorySchema.safeParse({ icon: "" }).success).toBe(false);
+    expect(updateCategorySchema.safeParse({}).success).toBe(false);
+  });
+});

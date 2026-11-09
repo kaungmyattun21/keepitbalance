@@ -26,6 +26,7 @@ export function toMonthlyBudgets({ month, budgets, spending }: MonthlyBudgetsInp
         groupId: budget.category.groupId,
         id: budget.category.id,
         name: budget.category.name,
+        icon: budget.category.icon,
         type: toApiType[budget.category.type],
       },
       amount: budget.amount.toFixed(2),

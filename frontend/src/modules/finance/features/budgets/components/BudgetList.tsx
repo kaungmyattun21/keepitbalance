@@ -22,7 +22,7 @@ export function BudgetList({ monthlyBudgets, onMonthChange }: BudgetListProps) {
       <ul className="flex flex-col gap-6">
         {monthlyBudgets.groups.map((entry) => (
           <li key={entry.group.id}>
-            <details open className="rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5">
+            <details open className="rounded-xl bg-muted/20 p-4 sm:p-5">
               <summary className="cursor-pointer text-sm font-medium wrap-anywhere">
                 {entry.group.name}
                 <span className="mt-1 block text-sm font-normal text-muted-foreground tabular-nums">
@@ -41,7 +41,7 @@ export function BudgetList({ monthlyBudgets, onMonthChange }: BudgetListProps) {
           </li>
         ))}
       </ul>
-      <div className="mt-6 flex justify-end border-t pt-4">
+      <div className="mt-6 flex justify-end pt-4">
         <SheetTrigger asChild>
           <Button variant="outline" size="sm">
             <Pencil aria-hidden />

@@ -3,17 +3,25 @@ import { Link, useSearchParams } from "react-router";
 import { CalendarDays, ChevronLeft, ChevronRight, ShoppingBasket } from "lucide-react";
 import { toast } from "sonner";
 import { usePlanningToday } from "./hooks/use-planning-today.ts";
-import { shiftDay, type MealPlanEntry, type MealSlot } from "@keepitbalance/shared/meal-planning";
+import {
+  mondayOf,
+  shiftDay,
+  resolvePlanningPeriod,
+  planningPeriodSchema,
+  type MealPlanEntry,
+  type MealSlot,
+} from "@keepitbalance/shared/meal-planning";
 import { useCurrentUser } from "@/modules/auth";
 import { DocumentTitle } from "@/shared/components/DocumentTitle";
 import { Button } from "@/shared/components/ui/button";
 import { formatCalendarDate } from "@/shared/lib/format";
 import { GroceryDrawer } from "../../shared/components/GroceryDrawer.tsx";
 import { ConfirmRemoval } from "../../shared/components/ConfirmRemoval.tsx";
-import { useMealPlan, useRecipes } from "../../shared/planning-queries.ts";
-import { useMealMutation } from "../../shared/use-planning-mutations.ts";
+import { useMealPlan, useRecipes, useMealPlanPreferences } from "../../shared/planning-queries.ts";
+import { useMealMutation, useSaveMealPlanPreferences } from "../../shared/use-planning-mutations.ts";
 import { groceryError } from "../../shared/use-grocery-mutations.ts";
-import { planningWeek } from "./planning-week.ts";
+import { planningPeriod } from "./planning-week.ts";
+import { PlanningDateRange } from "./components/PlanningDateRange.tsx";
 import { MealForm } from "./components/MealForm.tsx";
 import { MealCalendar } from "./components/MealCalendar.tsx";
 import { GenerationPreview } from "./components/GenerationPreview.tsx";
@@ -23,19 +31,42 @@ export function MealPlanPage() {
   const user = useCurrentUser();
   const [params, setParams] = useSearchParams();
   const today = usePlanningToday(user.timezone ?? "UTC");
-  const week = planningWeek(params, user.timezone ?? "UTC");
-  const days = Array.from({ length: 7 }, (_, index) => shiftDay(week, index));
+  const savedDates = useMealPlanPreferences();
+  const saveDates = useSaveMealPlanPreferences();
+  const period = planningPeriod(params, user.timezone ?? "UTC", savedDates);
+  const { weekStart: week, startDate, endDate } = resolvePlanningPeriod(period);
+  const rangeLength =
+    (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000 + 1;
+  const days = Array.from({ length: rangeLength }, (_, index) => shiftDay(startDate, index));
+  const rangeParams: Record<string, string> =
+    "weekStart" in period ? { week } : { start: startDate, end: endDate };
   const requestedDay = params.get("day");
-  const selectedDay =
-    requestedDay && days.includes(requestedDay) ? requestedDay : days.includes(today) ? today : week;
+  const selectedDay = requestedDay && days.includes(requestedDay) ? requestedDay : null;
   const recipes = useRecipes();
-  const meals = useMealPlan(week);
+  const meals = useMealPlan(period);
   const mutation = useMealMutation();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [removing, setRemoving] = useState<MealPlanEntry | null>(null);
   const [preview, setPreview] = useState(false);
-  function showWeek(next: string) {
-    setParams({ week: next }, { preventScrollReset: true });
+  function adjacentPeriod(direction: number) {
+    return planningPeriodSchema.safeParse(
+      "weekStart" in period
+        ? { weekStart: shiftDay(week, direction * 7) }
+        : {
+            startDate: shiftDay(startDate, direction * rangeLength),
+            endDate: shiftDay(endDate, direction * rangeLength),
+          },
+    );
+  }
+  function showAdjacent(direction: number) {
+    const next = adjacentPeriod(direction);
+    if (!next.success) return;
+    setParams(
+      "weekStart" in next.data
+        ? { week: next.data.weekStart }
+        : { start: next.data.startDate, end: next.data.endDate },
+      { preventScrollReset: true },
+    );
   }
   async function toggle(meal: MealPlanEntry) {
     try {
@@ -57,25 +88,38 @@ export function MealPlanPage() {
           <Button
             size="icon-sm"
             variant="ghost"
-            aria-label="Previous week"
-            onClick={() => showWeek(shiftDay(week, -7))}
+            aria-label={"weekStart" in period ? "Previous week" : "Previous date range"}
+            disabled={!adjacentPeriod(-1).success}
+            onClick={() => showAdjacent(-1)}
           >
             <ChevronLeft aria-hidden />
           </Button>
           <span className="text-sm font-medium">
-            {formatCalendarDate(week)} – {formatCalendarDate(days[6]!)}
+            {formatCalendarDate(startDate)} – {formatCalendarDate(endDate)}
           </span>
           <Button
             size="icon-sm"
             variant="ghost"
-            aria-label="Next week"
-            onClick={() => showWeek(shiftDay(week, 7))}
+            aria-label={"weekStart" in period ? "Next week" : "Next date range"}
+            disabled={!adjacentPeriod(1).success}
+            onClick={() => showAdjacent(1)}
           >
             <ChevronRight aria-hidden />
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setParams({}, { preventScrollReset: true })}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setParams({ week: mondayOf(today) }, { preventScrollReset: true })}
+          >
+            This week
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setParams({ week: mondayOf(today), day: today }, { preventScrollReset: true })}
+          >
             <CalendarDays aria-hidden />
             Today
           </Button>
@@ -90,6 +134,15 @@ export function MealPlanPage() {
           </Button>
         </div>
       </div>
+      <PlanningDateRange
+        key={`${startDate}-${endDate}`}
+        startDate={startDate}
+        endDate={endDate}
+        onApply={async (range) => {
+          await saveDates.mutateAsync(range);
+          setParams({ start: range.startDate, end: range.endDate }, { preventScrollReset: true });
+        }}
+      />
       {recipes.length === 0 && (
         <p className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
           Create a recipe before planning meals.{" "}
@@ -103,7 +156,13 @@ export function MealPlanPage() {
         meals={meals}
         today={today}
         selectedDay={selectedDay}
-        onSelectDay={(date) => setParams({ week, day: date }, { replace: true, preventScrollReset: true })}
+        rangeLabel={"weekStart" in period ? "Week" : "All days"}
+        onSelectDay={(date) =>
+          setParams(date ? { ...rangeParams, day: date } : rangeParams, {
+            replace: true,
+            preventScrollReset: true,
+          })
+        }
         canAdd={recipes.length > 0}
         busy={mutation.isPending}
         onAdd={(date, slot) => setEditor({ date, slot })}
@@ -129,10 +188,10 @@ export function MealPlanPage() {
       <GroceryDrawer
         open={preview}
         title="Shopping preview"
-        description="Review your meal requirements before changing the shopping list."
+        description="Review shopping needs for the selected dates before changing your list."
         onClose={() => setPreview(false)}
       >
-        {preview && <GenerationPreview week={week} onClose={() => setPreview(false)} />}
+        {preview && <GenerationPreview period={period} onClose={() => setPreview(false)} />}
       </GroceryDrawer>
       <ConfirmRemoval
         open={removing !== null}

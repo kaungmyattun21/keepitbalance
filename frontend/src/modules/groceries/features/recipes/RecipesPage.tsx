@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { BookOpen, Plus, Search } from "lucide-react";
 import type { Recipe } from "@keepitbalance/shared/meal-planning";
 import { env } from "@/shared/lib/env";
 import { DocumentTitle } from "@/shared/components/DocumentTitle";
@@ -10,6 +10,7 @@ import { GroceryDrawer } from "../../shared/components/GroceryDrawer.tsx";
 import { ConfirmRemoval } from "../../shared/components/ConfirmRemoval.tsx";
 import { useRecipes } from "../../shared/planning-queries.ts";
 import { useRecipeMutation } from "../../shared/use-planning-mutations.ts";
+import { RecipeCard } from "./components/RecipeCard.tsx";
 import { RecipeForm } from "./components/RecipeForm.tsx";
 export function RecipesPage() {
   const recipes = useRecipes();
@@ -54,59 +55,10 @@ export function RecipesPage() {
             {recipes.length ? "No recipes match your search." : "No recipes yet. Add your first recipe."}
           </div>
         ) : (
-          <ul className="grid gap-4 @xl/section:grid-cols-2 @4xl/section:grid-cols-3">
+          <ul className="grid items-stretch gap-5 @xl/section:grid-cols-2 @4xl/section:grid-cols-3">
             {filtered.map((recipe) => (
-              <li
-                key={recipe.id}
-                className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/60"
-              >
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                  onClick={() => setViewing(recipe)}
-                  aria-label={`View ${recipe.name}`}
-                >
-                  {recipe.imageUrl ? (
-                    <img
-                      src={`${env.apiBaseUrl}${recipe.imageUrl}`}
-                      crossOrigin="use-credentials"
-                      loading="lazy"
-                      alt=""
-                      className="aspect-video w-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex aspect-video items-center justify-center bg-muted/30">
-                      <BookOpen className="size-8 text-muted-foreground/40" aria-hidden />
-                    </span>
-                  )}
-                  <span className="block p-4">
-                    <span className="block font-medium wrap-anywhere">{recipe.name}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {recipe.servings} servings · {recipe.ingredients.length} ingredients ·{" "}
-                      {recipe.caloriesPerServing} kcal / serving
-                    </span>
-                  </span>
-                </button>
-                <div className="flex justify-end gap-1 px-3 pb-3">
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label={`Edit ${recipe.name}`}
-                    onClick={() => setEditor(recipe)}
-                  >
-                    <Pencil aria-hidden />
-                  </Button>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    disabled={recipe.inUse}
-                    title={recipe.inUse ? "Used by a meal plan" : "Delete recipe"}
-                    aria-label={`Delete ${recipe.name}`}
-                    onClick={() => setRemoving(recipe)}
-                  >
-                    <Trash2 aria-hidden />
-                  </Button>
-                </div>
+              <li key={recipe.id} className="min-w-0">
+                <RecipeCard recipe={recipe} onView={setViewing} onEdit={setEditor} onDelete={setRemoving} />
               </li>
             ))}
           </ul>

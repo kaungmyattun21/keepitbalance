@@ -1,3 +1,4 @@
+import { CategoryIcon } from "../../../shared/components/CategoryIcon";
 import type { Transaction } from "@keepitbalance/shared/finance";
 import { ArrowDownLeft, ArrowUpRight, Pencil, ShoppingBasket, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -20,15 +21,19 @@ export function TransactionListItem({ transaction, onEdit, onDelete }: Transacti
 
   return (
     <li className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-4 @lg/section:flex @lg/section:gap-3">
-      <span
-        aria-hidden
-        className={cn(
-          "row-span-2 flex size-9 shrink-0 items-center justify-center rounded-xl",
-          isIncome ? "bg-brand-subtle/60 text-brand" : "bg-muted text-muted-foreground",
-        )}
-      >
-        <TypeIcon className="size-4" />
-      </span>
+      {transaction.category.icon ? (
+        <CategoryIcon icon={transaction.category.icon} className="row-span-2 size-9" />
+      ) : (
+        <span
+          aria-hidden
+          className={cn(
+            "row-span-2 flex size-9 shrink-0 items-center justify-center rounded-xl",
+            isIncome ? "bg-brand-subtle/60 text-brand" : "bg-muted text-muted-foreground",
+          )}
+        >
+          <TypeIcon className="size-4" />
+        </span>
+      )}
 
       <div className="col-start-2 min-w-0 flex-1">
         <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">

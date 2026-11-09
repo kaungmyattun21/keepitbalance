@@ -6,7 +6,7 @@ export function BudgetsEmptyState() {
   return (
     <section
       aria-labelledby="budgets-empty-heading"
-      className="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-card/50 px-6 py-14 text-center"
+      className="flex flex-col items-center gap-4 rounded-xl bg-card px-6 py-14 text-center"
     >
       <span className="flex size-12 items-center justify-center rounded-full bg-brand-subtle text-brand">
         <PiggyBank className="size-5" aria-hidden />

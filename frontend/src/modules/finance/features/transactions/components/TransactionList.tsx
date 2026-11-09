@@ -40,7 +40,7 @@ export function TransactionList({ categories }: { categories: Category[] }) {
           )}
         </div>
       ) : (
-        <ul className="-my-3 divide-y">
+        <ul className="-my-3 space-y-1">
           {transactionPage.data.map((transaction) => (
             <TransactionListItem
               key={transaction.id}
@@ -53,7 +53,7 @@ export function TransactionList({ categories }: { categories: Category[] }) {
       )}
 
       {transactionPage.totalPages > 1 && (
-        <div className="mt-6 border-t pt-4">
+        <div className="mt-6 pt-4">
           <Pagination page={page} totalPages={transactionPage.totalPages} onPageChange={showPage} />
         </div>
       )}

@@ -38,7 +38,7 @@ export function PantryPage() {
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-border/60">
+          <ul className="space-y-1">
             {items.map((item) => (
               <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-5">
                 <div className="min-w-0 flex-1">

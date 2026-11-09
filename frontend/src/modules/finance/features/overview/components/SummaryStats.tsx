@@ -13,34 +13,36 @@ export function SummaryStats({ summary }: { summary: TransactionSummary }) {
   return (
     <section
       aria-label="Monthly balance"
-      className="@container/balance relative isolate flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-5 text-card-foreground sm:p-6"
+      className="@container/balance flex min-w-0 flex-1 flex-col gap-3 text-card-foreground"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-28 -right-28 -z-10 size-80 rounded-full border border-foreground/8"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-16 -right-16 -z-10 size-56 rounded-full border border-foreground/8"
-      />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <WalletCards className="size-4" aria-hidden /> Monthly snapshot
-        </span>
-        <span className="rounded-full border border-border/60 px-2.5 py-1 text-xs text-muted-foreground">
-          {formatMonth(summary.month)}
-        </span>
+      <div className="relative isolate flex min-h-48 flex-1 flex-col justify-between overflow-hidden rounded-2xl bg-card p-5 sm:min-h-52 sm:p-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-28 -right-28 -z-10 size-80 rounded-full border-2 border-foreground/12"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-16 -right-16 -z-10 size-56 rounded-full border-2 border-foreground/12"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <WalletCards className="size-4" aria-hidden /> Monthly snapshot
+          </span>
+          <span className="rounded-full border border-border/60 px-2.5 py-1 text-xs text-muted-foreground">
+            {formatMonth(summary.month)}
+          </span>
+        </div>
+        <dl className="mt-5 mb-3">
+          <dt className="text-xs text-muted-foreground">Net balance</dt>
+          <dd className="mt-1.5 text-[clamp(1.75rem,8cqi,2.5rem)] leading-tight font-medium tracking-tight wrap-anywhere tabular-nums">
+            {signedMoney(summary.net)}
+          </dd>
+        </dl>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Income minus expenses for the selected month.
+        </p>
       </div>
-      <dl className="my-5">
-        <dt className="text-xs text-muted-foreground">Net balance</dt>
-        <dd className="mt-1.5 text-[clamp(1.5rem,8cqi,2.5rem)] leading-tight font-medium tracking-tight wrap-anywhere tabular-nums">
-          {signedMoney(summary.net)}
-        </dd>
-      </dl>
-      <p className="-mt-2 mb-4 text-xs leading-relaxed text-muted-foreground">
-        Income minus expenses for the selected month.
-      </p>
-      <dl className="grid min-w-0 grid-cols-1 gap-3 border-t border-border/60 pt-4 @xs/balance:grid-cols-2">
+      <dl className="grid min-w-0 grid-cols-2 gap-3">
         {[
           {
             label: "Income",
@@ -57,7 +59,10 @@ export function SummaryStats({ summary }: { summary: TransactionSummary }) {
             tint: "bg-expense-subtle",
           },
         ].map(({ label, amount, icon: Icon, color, tint }) => (
-          <div key={label} className="min-w-0">
+          <div
+            key={label}
+            className="flex min-h-24 min-w-0 flex-col justify-between rounded-2xl bg-card p-4 sm:min-h-28 sm:p-5"
+          >
             <dt className={cn("mb-1 flex items-center gap-2 text-xs", color)}>
               <span className={cn("grid size-5 shrink-0 place-items-center rounded-full", tint)}>
                 <Icon className="size-3" aria-hidden />
@@ -70,7 +75,7 @@ export function SummaryStats({ summary }: { summary: TransactionSummary }) {
           </div>
         ))}
       </dl>
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="hidden flex-wrap items-center gap-3 pt-1 md:flex">
         <Button asChild size="sm" variant="outline" className="px-4">
           <Link to={`/finance/transactions?month=${summary.month}`}>
             <Plus className="size-3.5" aria-hidden /> Record transaction

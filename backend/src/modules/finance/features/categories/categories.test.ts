@@ -29,6 +29,7 @@ describe("GET /api/v1/categories", () => {
     expect(response.body.data[0]).toEqual({
       id: expect.any(String),
       name: "Other",
+      icon: null,
       type: "income",
       groupId: expect.any(String),
     });
@@ -215,4 +216,48 @@ it("enforces required group ownership and type in the database", async () => {
       data: { userId: user.id, type: "EXPENSE", name: "Wrong owner", groupId: other.id },
     }),
   ).rejects.toThrow();
+});
+
+describe("optional category icons", () => {
+  it("creates, preserves, replaces and clears icons across category and finance responses", async () => {
+    const groups = (await agent.get("/api/v1/category-groups?type=expense")).body.data;
+    const groupId = groups[0].id;
+    const without = await agent.post("/api/v1/categories").send({ name: "No icon", groupId });
+    expect(without.status).toBe(201);
+    expect(without.body.icon).toBeNull();
+    const created = await agent.post("/api/v1/categories").send({ name: "Snacks", groupId, icon: "grocery" });
+    expect(created.status).toBe(201);
+    const id = created.body.id;
+    expect(created.body.icon).toBe("grocery");
+    expect((await agent.patch(`/api/v1/categories/${id}`).send({ name: "Food" })).body.icon).toBe("grocery");
+    const expense = await agent
+      .post("/api/v1/transactions")
+      .send({ type: "expense", categoryId: id, amount: "15", date: "2026-11-01" });
+    expect(expense.status).toBe(201);
+    expect(expense.body.category.icon).toBe("grocery");
+    await agent.put("/api/v1/budgets").send({ budgets: [{ categoryId: id, amount: "100" }] });
+    const budgets = await agent.get("/api/v1/budgets?month=2026-11");
+    expect(budgets.body.groups[0].budgets[0].category.icon).toBe("grocery");
+    const summary = await agent.get("/api/v1/transactions/summary?month=2026-11");
+    expect(
+      summary.body.byCategory.find((category: { categoryId: string }) => category.categoryId === id).icon,
+    ).toBe("grocery");
+    const bill = await agent.post("/api/v1/bills").send({
+      name: "Food delivery",
+      categoryId: id,
+      amount: "15",
+      frequency: "monthly",
+      nextDueDate: "2026-11-05",
+    });
+    expect(bill.status).toBe(201);
+    expect(bill.body.category.icon).toBe("grocery");
+    expect((await agent.patch(`/api/v1/categories/${id}`).send({ icon: "dining" })).body.icon).toBe("dining");
+    const owner = newAgent();
+    await signUp(owner, { ...testUser, email: "other@example.com" });
+    expect((await owner.patch(`/api/v1/categories/${id}`).send({ icon: "home" })).status).toBe(404);
+    expect((await agent.patch(`/api/v1/categories/${id}`).send({ icon: "unknown" })).status).toBe(400);
+    expect((await agent.patch(`/api/v1/categories/${id}`).send({ icon: null })).body.icon).toBeNull();
+    const categories = (await agent.get("/api/v1/categories")).body.data;
+    expect(categories.find((category: { id: string }) => category.id === id).icon).toBeNull();
+  });
 });

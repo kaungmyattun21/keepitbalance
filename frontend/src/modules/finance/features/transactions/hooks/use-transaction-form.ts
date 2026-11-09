@@ -1,3 +1,4 @@
+import { CategoryIcon } from "../../../shared/components/CategoryIcon";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createTransactionSchema,
@@ -7,7 +8,7 @@ import {
   type TransactionType,
 } from "@keepitbalance/shared/finance";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { ApiError } from "@/shared/lib/api";
@@ -60,6 +61,7 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
     .map((category) => ({
       value: category.id,
       label: category.name,
+      icon: createElement(CategoryIcon, { icon: category.icon, className: "size-6 rounded-lg" }),
       group: groups.find((group) => group.id === category.groupId)?.name,
     }));
 

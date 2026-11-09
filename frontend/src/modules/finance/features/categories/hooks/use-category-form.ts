@@ -1,5 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createCategorySchema, type CreateCategoryValues } from "@keepitbalance/shared/finance";
+import {
+  createCategorySchema,
+  categoryIconSchema,
+  type CreateCategoryValues,
+} from "@keepitbalance/shared/finance";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { ApiError } from "@/shared/lib/api";
@@ -15,7 +19,11 @@ export function useCategoryForm({
   const [error, setError] = useState<string | null>(null);
   const form = useForm<CreateCategoryValues>({
     resolver: zodResolver(createCategorySchema),
-    defaultValues: { name: category?.name ?? "", groupId: category?.groupId ?? group.id },
+    defaultValues: {
+      name: category?.name ?? "",
+      groupId: category?.groupId ?? group.id,
+      icon: categoryIconSchema.safeParse(category?.icon).data ?? null,
+    },
   });
   async function save(values: CreateCategoryValues) {
     setError(null);

@@ -1,4 +1,9 @@
-import type { MealPlanEntry, MealSlot, MealValues } from "@keepitbalance/shared/meal-planning";
+import type {
+  MealPlanEntry,
+  MealSlot,
+  MealValues,
+  PlanningDateRange,
+} from "@keepitbalance/shared/meal-planning";
 import type { Prisma } from "../../../../generated/prisma/client.ts";
 import { prisma } from "../../../../shared/db.ts";
 export const mealInclude = {
@@ -65,4 +70,19 @@ export function update(tx: Prisma.TransactionClient, row: Row, input: MealValues
 }
 export function remove(tx: Prisma.TransactionClient, id: string) {
   return tx.mealPlanEntry.delete({ where: { id } });
+}
+
+const preferenceSelect = { mealPlanStartDate: true, mealPlanEndDate: true } satisfies Prisma.UserSelect;
+export function findPreferences(userId: string) {
+  return prisma.user.findUnique({ where: { id: userId }, select: preferenceSelect });
+}
+export function updatePreferences(userId: string, range: PlanningDateRange) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      mealPlanStartDate: new Date(`${range.startDate}T00:00:00.000Z`),
+      mealPlanEndDate: new Date(`${range.endDate}T00:00:00.000Z`),
+    },
+    select: preferenceSelect,
+  });
 }

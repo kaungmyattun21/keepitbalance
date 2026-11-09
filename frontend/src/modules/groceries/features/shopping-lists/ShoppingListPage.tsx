@@ -58,9 +58,9 @@ export function ShoppingListPage() {
       {!list ? (
         <section
           aria-label="No open shopping list"
-          className="flex flex-col items-center gap-4 rounded-2xl border border-border/70 bg-card px-6 py-20 text-center sm:py-28"
+          className="flex flex-col items-center gap-4 rounded-2xl bg-card px-6 py-20 text-center sm:py-28"
         >
-          <div className="mb-2 grid size-16 place-items-center rounded-2xl border border-border/60 bg-muted/50">
+          <div className="mb-2 grid size-16 place-items-center rounded-2xl bg-muted/50">
             <ShoppingBasket className="size-7 text-brand" strokeWidth={1.5} aria-hidden />
           </div>
           <h2 className="text-xl font-medium tracking-tight">Start your next shopping trip</h2>
@@ -93,14 +93,14 @@ export function ShoppingListPage() {
             ) : (
               <>
                 <div
-                  className="hidden grid-cols-[minmax(0,1fr)_6rem_4.5rem] gap-3 border-b border-border/60 py-3 text-xs text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_8rem_5rem] sm:gap-5"
+                  className="hidden grid-cols-[minmax(0,1fr)_6rem_4.5rem] gap-3 py-3 text-xs text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_8rem_5rem] sm:gap-5"
                   aria-hidden="true"
                 >
                   <span>Item</span>
                   <span className="text-right">Total price</span>
                   <span className="sr-only">Actions</span>
                 </div>
-                <ul className="divide-y divide-border/60">
+                <ul className="space-y-1">
                   {list.items.map((item) => (
                     <ShoppingItemRow
                       key={item.id}

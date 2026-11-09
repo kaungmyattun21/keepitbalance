@@ -3,7 +3,8 @@ import {
   mealSchema,
   updateMealSchema,
   mealEatenSchema,
-  weekQuerySchema,
+  planningPeriodSchema,
+  planningDateRangeSchema,
 } from "@keepitbalance/shared/meal-planning";
 import { groceryParamsSchema } from "@keepitbalance/shared/groceries";
 import { requireAuth } from "../../../auth/index.ts";
@@ -11,7 +12,9 @@ import { validate } from "../../../../shared/middleware/validate.ts";
 import * as controller from "./controller.ts";
 export const mealPlanRoutes = Router();
 mealPlanRoutes.use(requireAuth);
-mealPlanRoutes.get("/", validate({ query: weekQuerySchema }), controller.list);
+mealPlanRoutes.get("/preferences", controller.getPreferences);
+mealPlanRoutes.put("/preferences", validate({ body: planningDateRangeSchema }), controller.savePreferences);
+mealPlanRoutes.get("/", validate({ query: planningPeriodSchema }), controller.list);
 mealPlanRoutes.post("/", validate({ body: mealSchema }), controller.create);
 mealPlanRoutes.put(
   "/:id",

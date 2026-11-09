@@ -12,7 +12,7 @@ export function ShoppingHistoryPage() {
       <DocumentTitle title="Shopping history" />
       <h2 className="text-lg font-medium tracking-tight">Shopping history</h2>
       {lists.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/70 bg-card px-6 py-20 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-card px-6 py-20 text-center">
           <Receipt className="mb-1 size-8 text-muted-foreground" strokeWidth={1.5} aria-hidden />
           <p className="text-sm text-muted-foreground tabular-nums">No completed shopping trips yet.</p>
         </div>
@@ -31,7 +31,7 @@ export function ShoppingHistoryPage() {
             </span>
           }
         >
-          <ul className="divide-y divide-border/60">
+          <ul className="space-y-1">
             {list.items.map((item) => (
               <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
                 <span className="flex min-w-0 items-center gap-3 wrap-break-word">

@@ -10,7 +10,11 @@ export function GroupEditor({ group, onClose }: GroupEditorOptions) {
   const { form, error, isPending, handleSubmit } = useGroupForm({ group, onClose });
   return (
     <FieldIdScope>
-      <form noValidate onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-4 rounded-lg border p-4">
+      <form
+        noValidate
+        onSubmit={handleSubmit}
+        className="flex min-w-0 flex-col gap-4 rounded-xl bg-muted/20 p-4"
+      >
         <FormAlert message={error} />
         <TextField control={form.control} name="name" label="Group name" />
         {!group && (

@@ -1,7 +1,13 @@
 import type { Prisma, TransactionType } from "../../../../generated/prisma/client.ts";
 import { prisma } from "../../../../shared/db.ts";
 
-const categorySelect = { id: true, name: true, type: true, groupId: true } satisfies Prisma.CategorySelect;
+const categorySelect = {
+  id: true,
+  name: true,
+  type: true,
+  groupId: true,
+  icon: true,
+} satisfies Prisma.CategorySelect;
 const groupSelect = {
   id: true,
   name: true,
@@ -64,11 +70,21 @@ export function deleteGroup(userId: string, id: string) {
   return prisma.categoryGroup.delete({ where: { id, userId } });
 }
 
-export function createCategory(userId: string, name: string, groupId: string, type: TransactionType) {
-  return prisma.category.create({ data: { userId, name, groupId, type }, select: categorySelect });
+export function createCategory(
+  userId: string,
+  name: string,
+  groupId: string,
+  type: TransactionType,
+  icon: string | null = null,
+) {
+  return prisma.category.create({ data: { userId, name, groupId, type, icon }, select: categorySelect });
 }
 
-export function updateCategory(userId: string, id: string, data: { name?: string; groupId?: string }) {
+export function updateCategory(
+  userId: string,
+  id: string,
+  data: { name?: string; groupId?: string; icon?: string | null },
+) {
   return prisma.category.update({ where: { id, userId }, data, select: categorySelect });
 }
 

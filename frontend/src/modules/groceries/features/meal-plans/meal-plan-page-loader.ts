@@ -1,10 +1,11 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { cachedUserTimezone } from "@/modules/auth";
 import { ensureQuery } from "@/shared/lib/query-client";
-import { recipesQuery, mealPlanQuery } from "../../shared/planning-queries.ts";
-import { planningWeek } from "./planning-week.ts";
+import { recipesQuery, mealPlanQuery, mealPlanPreferencesQuery } from "../../shared/planning-queries.ts";
+import { planningPeriod } from "./planning-week.ts";
 export async function mealPlanPageLoader({ request }: LoaderFunctionArgs) {
-  const week = planningWeek(new URL(request.url).searchParams, cachedUserTimezone());
-  await Promise.all([ensureQuery(recipesQuery), ensureQuery(mealPlanQuery(week))]);
+  const [, saved] = await Promise.all([ensureQuery(recipesQuery), ensureQuery(mealPlanPreferencesQuery)]);
+  const period = planningPeriod(new URL(request.url).searchParams, cachedUserTimezone(), saved);
+  await ensureQuery(mealPlanQuery(period));
   return null;
 }

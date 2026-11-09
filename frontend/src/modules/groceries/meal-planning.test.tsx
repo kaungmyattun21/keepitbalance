@@ -8,6 +8,7 @@ import { Toaster } from "sonner";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   Recipe,
+  PlanningDateRange,
   MealPlanEntry,
   MealValues,
   RecipeValues,
@@ -34,6 +35,7 @@ const rice = { id: ids.rice, name: "Rice", unit: "g", inUse: false };
 const eggs = { id: ids.eggs, name: "Eggs", unit: "pcs", inUse: true };
 const server = createFetchMock();
 let recipes: Recipe[];
+let savedDates: PlanningDateRange | null;
 let meals: MealPlanEntry[];
 let current: ShoppingList | null;
 let generated: GenerationPreview;
@@ -86,10 +88,13 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   recipes = [];
+  savedDates = null;
   meals = [];
   current = null;
   generated = {
     weekStart: week,
+    startDate: week,
+    endDate: "2026-11-01",
     token: "a".repeat(64),
     listId: null,
     listWeekStart: null,
@@ -114,6 +119,11 @@ beforeEach(() => {
   server.on("GET /api/v1/shopping-lists/current", () =>
     json(200, { data: current, defaultCategoryId: null }),
   );
+  server.on("GET /api/v1/meal-plans/preferences", () => json(200, { data: savedDates }));
+  server.on("PUT /api/v1/meal-plans/preferences", async (request) => {
+    savedDates = (await request.json()) as PlanningDateRange;
+    return json(200, { data: savedDates });
+  });
   server.on("GET /api/v1/recipes", () => json(200, { data: recipes }));
   server.on("POST /api/v1/recipes", async (request) => {
     const values = (await request.json()) as RecipeValues;
@@ -150,13 +160,13 @@ beforeEach(() => {
     return new Response(null, { status: 204 });
   });
   server.on("GET /api/v1/meal-plans", (request) => {
-    const start = new URL(request.url).searchParams.get("weekStart")!;
+    const query = new URL(request.url).searchParams;
+    const start = query.get("startDate") ?? query.get("weekStart")!;
+    const before = query.get("endDate")
+      ? new Date(Date.parse(`${query.get("endDate")}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)
+      : new Date(Date.parse(`${start}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
     return json(200, {
-      data: meals.filter(
-        (meal) =>
-          meal.date >= start &&
-          meal.date < new Date(Date.parse(`${start}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10),
-      ),
+      data: meals.filter((meal) => meal.date >= start && meal.date < before),
     });
   });
   server.on("POST /api/v1/meal-plans", async (request) => {
@@ -281,11 +291,119 @@ describe("recipe collection", () => {
 });
 
 describe("weekly meal planning", () => {
+  it("shows meals across multiple days immediately and can focus a day or return to the week", async () => {
+    recipes = [recipeFixture()];
+    meals = [
+      mealFixture(),
+      {
+        ...mealFixture(),
+        id: "66666666-6666-4666-8666-666666666666",
+        date: "2026-10-28",
+        slot: "lunch",
+        recipe: { ...mealFixture().recipe, name: "Vegetable soup" },
+      },
+    ];
+    const router = renderGroceries(`/meals/plan?week=${week}`);
+    const monday = within(await screen.findByRole("region", { name: `Meals for ${week}` }));
+    const wednesday = within(screen.getByRole("region", { name: "Meals for 2026-10-28" }));
+    expect(monday.getByRole("button", { name: "Edit meal Rice bowl" })).toBeTruthy();
+    expect(wednesday.getByRole("button", { name: "Edit meal Vegetable soup" })).toBeTruthy();
+    expect(screen.getByText("2 meals planned · 0 eaten")).toBeTruthy();
+    const emptyDay = within(screen.getByRole("region", { name: "Meals for 2026-10-27" }));
+    expect(emptyDay.getByText("No meals planned")).toBeTruthy();
+    expect(emptyDay.getAllByRole("button")).toHaveLength(1);
+    await userEvent.click(screen.getAllByRole("tab")[3]!);
+    expect(await screen.findByRole("button", { name: "Edit meal Vegetable soup" })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Edit meal Rice bowl" })).toBeNull());
+    await userEvent.click(screen.getByRole("tab", { name: "Week" }));
+    expect(await screen.findByRole("button", { name: "Edit meal Rice bowl" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit meal Vegetable soup" })).toBeTruthy();
+    expect(router.state.location.search).toBe(`?week=${week}`);
+    expect(router.state.preventScrollReset).toBe(true);
+  });
+  it("applies custom calendar dates and uses the same range for shopping generation", async () => {
+    recipes = [recipeFixture()];
+    meals = [
+      mealFixture(),
+      {
+        ...mealFixture(),
+        id: "66666666-6666-4666-8666-666666666666",
+        date: "2026-11-02",
+        recipe: { ...mealFixture().recipe, name: "Soup" },
+      },
+    ];
+    generated = { ...generated, startDate: "2026-10-28", endDate: "2026-11-03" };
+    const router = renderGroceries(`/meals/plan?week=${week}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Choose planning dates" }));
+    const calendar = within(await screen.findByRole("dialog", { name: "Choose planning date range" }));
+    expect(await calendar.findByRole("grid")).toBeTruthy();
+    expect(calendar.getAllByRole("grid")).toHaveLength(1);
+    await userEvent.click(calendar.getByRole("button", { name: /October 28/i }));
+    expect((calendar.getByRole("button", { name: "Apply dates" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(router.state.location.search).toBe(`?week=${week}`);
+    await userEvent.click(calendar.getByRole("button", { name: /November 3/i }));
+    await userEvent.click(calendar.getByRole("button", { name: "Apply dates" }));
+    await waitFor(() => expect(router.state.location.search).toBe("?start=2026-10-28&end=2026-11-03"));
+    expect(await screen.findByRole("tab", { name: "All days", selected: true })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Meals for 2026-10-26" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Meals for 2026-11-03" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit meal Soup" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Edit meal Rice bowl" })).toBeNull();
+    const query = new URL(server.calls("GET /api/v1/meal-plans").at(-1)!.url).searchParams;
+    expect(query.get("startDate")).toBe("2026-10-28");
+    expect(query.get("endDate")).toBe("2026-11-03");
+    await userEvent.click(screen.getByRole("button", { name: "Generate shopping list" }));
+    const preview = within(await screen.findByRole("dialog", { name: "Shopping preview" }));
+    await userEvent.click(await preview.findByRole("button", { name: "Add 1 shortages" }));
+    await waitFor(() => expect(server.calls("POST /api/v1/shopping-generation")).toHaveLength(1));
+    expect(await server.calls("POST /api/v1/shopping-generation")[0]!.json()).toEqual({
+      startDate: "2026-10-28",
+      endDate: "2026-11-03",
+      token: "a".repeat(64),
+    });
+    expect(await server.calls("PUT /api/v1/meal-plans/preferences")[0]!.json()).toEqual({
+      startDate: "2026-10-28",
+      endDate: "2026-11-03",
+    });
+    await screen.findByRole("heading", { name: "Your shopping list" });
+    queryClient.removeQueries({ queryKey: ["groceries", "meal-plan-preferences"] });
+    await router.navigate("/meals/plan");
+    expect(await screen.findByRole("region", { name: "Meals for 2026-10-28" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Meals for 2026-11-03" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "All days", selected: true })).toBeTruthy();
+  });
+  it("keeps the selected dates open when saving fails and allows retry", async () => {
+    recipes = [recipeFixture()];
+    let fail = true;
+    server.on("PUT /api/v1/meal-plans/preferences", async (request) => {
+      if (fail)
+        return json(503, { error: { code: "INTERNAL_ERROR", message: "Couldn't save dates. Try again." } });
+      savedDates = (await request.json()) as PlanningDateRange;
+      return json(200, { data: savedDates });
+    });
+    const router = renderGroceries(`/meals/plan?week=${week}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Choose planning dates" }));
+    const calendar = within(await screen.findByRole("dialog", { name: "Choose planning date range" }));
+    await calendar.findByRole("grid");
+    await userEvent.click(calendar.getByRole("button", { name: /October 28/i }));
+    await userEvent.click(calendar.getByRole("button", { name: /November 3/i }));
+    await userEvent.click(calendar.getByRole("button", { name: "Apply dates" }));
+    expect(await calendar.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Couldn't save dates. Try again.",
+    );
+    expect(router.state.location.search).toBe(`?week=${week}`);
+    expect(savedDates).toBeNull();
+    fail = false;
+    await userEvent.click(calendar.getByRole("button", { name: "Apply dates" }));
+    await waitFor(() => expect(router.state.location.search).toBe("?start=2026-10-28&end=2026-11-03"));
+    expect(savedDates).toEqual({ startDate: "2026-10-28", endDate: "2026-11-03" });
+  });
   it("plans servings, shows recipe photos, marks a meal eaten, and navigates calendar weeks", async () => {
     recipes = [{ ...recipeFixture(), imageUrl: `/recipes/${ids.recipe}/image?v=1` }];
     renderGroceries(`/meals/plan?week=${week}&day=${week}`);
     const tabs = within(await screen.findByRole("tablist", { name: "Choose a meal planning day" }));
-    expect(tabs.getAllByRole("tab")).toHaveLength(7);
+    expect(tabs.getAllByRole("tab")).toHaveLength(8);
     expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
     const panel = within(screen.getByRole("tabpanel"));
     for (const slot of ["breakfast", "lunch", "dinner", "snack"]) {
@@ -334,17 +452,17 @@ describe("weekly meal planning", () => {
     meals = [mealFixture()];
     const router = renderGroceries(`/meals/plan?week=${week}&day=${week}`);
     const dayPicker = within(await screen.findByRole("tablist", { name: "Choose a meal planning day" }));
-    const nextDay = dayPicker.getAllByRole("tab")[1]!;
+    const nextDay = dayPicker.getAllByRole("tab")[2]!;
     await userEvent.click(nextDay);
     await waitFor(() => expect(router.state.location.search).toBe(`?week=${week}&day=2026-10-27`));
     expect(router.state.historyAction).toBe("REPLACE");
     expect(router.state.preventScrollReset).toBe(true);
-    await waitFor(() => expect(screen.getAllByRole("tab")[1]!.getAttribute("aria-selected")).toBe("true"));
+    await waitFor(() => expect(screen.getAllByRole("tab")[2]!.getAttribute("aria-selected")).toBe("true"));
     expect(screen.queryByRole("button", { name: "Edit meal Rice bowl" })).toBeNull();
     expect(screen.getByRole("button", { name: "Add dinner for 2026-10-27" })).toBeTruthy();
     await userEvent.keyboard("{ArrowLeft}");
     await waitFor(() => expect(router.state.location.search).toBe(`?week=${week}&day=${week}`));
-    await userEvent.click(screen.getByRole("button", { name: "Delete meal Rice bowl" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Delete meal Rice bowl" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     const confirm = within(await screen.findByRole("alertdialog", { name: "Remove this planned meal?" }));
     await userEvent.click(confirm.getByRole("button", { name: "Remove" }));
@@ -352,27 +470,29 @@ describe("weekly meal planning", () => {
     expect(screen.queryByRole("button", { name: "Edit meal Rice bowl" })).toBeNull();
     expect(server.calls(`DELETE /api/v1/meal-plans/${ids.meal}`)).toHaveLength(1);
   });
-  it("defaults to today in the user timezone, follows a new day, and returns to today", async () => {
+  it("opens the whole current week, follows the user timezone, and focuses today on request", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-01T17:29:00Z")); // Sunday, 23:59 in Asia/Yangon.
     recipes = [recipeFixture()];
     const router = renderGroceries("/meals/plan");
     const selectedDate = () =>
       screen.getByRole("tab", { selected: true }).querySelector("time")?.getAttribute("datetime");
-    await waitFor(() => expect(selectedDate()).toBe("2026-11-01"));
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Week", selected: true })).toBeTruthy());
+    expect(screen.getByRole("region", { name: "Meals for 2026-11-01" })).toBeTruthy();
     vi.setSystemTime(new Date("2026-11-01T17:31:00Z"));
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
     });
-    await waitFor(() => expect(selectedDate()).toBe("2026-11-02"));
+    await waitFor(() => expect(screen.getByRole("region", { name: "Meals for 2026-11-02" })).toBeTruthy());
+    expect(screen.getByRole("tab", { name: "Week", selected: true })).toBeTruthy();
     expect(new URL(server.calls("GET /api/v1/meal-plans").at(-1)!.url).searchParams.get("weekStart")).toBe(
       "2026-11-02",
     );
-    await userEvent.click(screen.getAllByRole("tab")[2]!);
+    await userEvent.click(screen.getAllByRole("tab")[3]!);
     await waitFor(() => expect(selectedDate()).toBe("2026-11-04"));
     await userEvent.click(screen.getByRole("button", { name: "Today" }));
     await waitFor(() => expect(selectedDate()).toBe("2026-11-02"));
-    expect(router.state.location.search).toBe("");
+    expect(router.state.location.search).toBe("?week=2026-11-02&day=2026-11-02");
     expect(router.state.preventScrollReset).toBe(true);
   });
   it("shows protected items, applies only safe shortages, and opens the shopping list", async () => {

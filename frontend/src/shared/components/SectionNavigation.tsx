@@ -30,7 +30,7 @@ export function SectionNavigation({ label, items }: { label: string; items: Sect
                     ? "@3xl/sections:min-h-0 @3xl/sections:flex-row @3xl/sections:gap-2 @3xl/sections:rounded-full @3xl/sections:px-3.5 @3xl/sections:py-2 @3xl/sections:text-sm"
                     : "@lg/sections:min-h-0 @lg/sections:flex-row @lg/sections:gap-2 @lg/sections:rounded-full @lg/sections:px-3.5 @lg/sections:py-2 @lg/sections:text-sm",
                   isActive
-                    ? "bg-card text-brand shadow-sm"
+                    ? "bg-card text-brand"
                     : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
                 )
               }

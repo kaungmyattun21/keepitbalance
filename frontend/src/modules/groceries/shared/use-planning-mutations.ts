@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
+  PlanningDateRange,
   RecipeValues,
   Recipe,
   MealValues,
@@ -59,5 +60,14 @@ export function useGenerationMutation() {
   return useMutation({
     mutationFn: (values: ApplyGenerationValues) => api.post<GenerationResult>("/shopping-generation", values),
     onSuccess: refresh,
+  });
+}
+
+export function useSaveMealPlanPreferences() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (range: PlanningDateRange) =>
+      (await api.put<{ data: PlanningDateRange }>("/meal-plans/preferences", range)).data,
+    onSuccess: (range) => client.setQueryData(groceryKeys.mealPlanPreferences, range),
   });
 }

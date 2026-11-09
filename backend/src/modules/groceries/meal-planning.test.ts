@@ -287,3 +287,86 @@ describe("shopping generation", () => {
     expect((await agent.get(`/api/v1/shopping-generation?weekStart=${week}`)).status).toBe(400);
   });
 });
+
+describe("custom meal-planning date ranges", () => {
+  it("lists inclusive endpoints and generates only uneaten meals in the chosen dates across weeks", async () => {
+    const rice = await ingredient();
+    const current = await recipe(rice.id);
+    await meal(current.id, { date: "2026-10-27", servings: 9 });
+    const start = await meal(current.id, { date: "2026-10-28", servings: 1 });
+    const end = await meal(current.id, { date: "2026-11-03", servings: 2 });
+    await meal(current.id, { date: "2026-11-02", servings: 9, eaten: true });
+    await meal(current.id, { date: "2026-11-04", servings: 9 });
+    const period = { startDate: "2026-10-28", endDate: "2026-11-03" };
+    const query = new URLSearchParams(period).toString();
+    const result = await agent.get(`/api/v1/meal-plans?${query}`);
+    expect(result.status).toBe(200);
+    expect(result.body.data).toHaveLength(3);
+    expect(result.body.data.map((entry: { id: string }) => entry.id)).toEqual(
+      expect.arrayContaining([start.id, end.id]),
+    );
+    const preview = await agent.get(`/api/v1/shopping-generation?${query}`);
+    expect(preview.status).toBe(200);
+    expect(preview.body).toMatchObject({
+      ...period,
+      weekStart: "2026-10-26",
+      mealCount: 2,
+      rows: [{ required: "450.00", toAdd: "450.00" }],
+    });
+    const wrongPeriod = await agent
+      .post("/api/v1/shopping-generation")
+      .send({ ...period, endDate: "2026-11-02", token: preview.body.token });
+    expect(wrongPeriod.status).toBe(409);
+    const applied = await agent
+      .post("/api/v1/shopping-generation")
+      .send({ ...period, token: preview.body.token });
+    expect(applied.status).toBe(200);
+    expect(applied.body.data.items[0].quantity).toBe("450.00");
+    expect(applied.body.data.weekStart).toBe("2026-10-26");
+    const owner = await other();
+    expect((await owner.get(`/api/v1/meal-plans?${query}`)).body.data).toEqual([]);
+    const invalidRanges: Record<string, string>[] = [
+      { startDate: "2026-11-03", endDate: "2026-10-28" },
+      { startDate: "2026-11-01", endDate: "2026-12-02" },
+      { startDate: "2026-11-01" },
+    ];
+    for (const invalid of invalidRanges) {
+      const params = new URLSearchParams(invalid).toString();
+      expect((await agent.get(`/api/v1/meal-plans?${params}`)).status).toBe(400);
+      expect((await agent.get(`/api/v1/shopping-generation?${params}`)).status).toBe(400);
+    }
+  });
+});
+
+describe("saved meal-planning dates", () => {
+  it("persists account-specific dates and protects them from invalid or unauthenticated updates", async () => {
+    expect((await agent.get("/api/v1/meal-plans/preferences")).body).toEqual({ data: null });
+    const range = { startDate: "2026-11-04", endDate: "2026-11-12" };
+    const saved = await agent.put("/api/v1/meal-plans/preferences").send(range);
+    expect(saved.status).toBe(200);
+    expect(saved.body).toEqual({ data: range });
+    expect((await agent.get("/api/v1/meal-plans/preferences")).body).toEqual({ data: range });
+    const owner = await other();
+    expect((await owner.get("/api/v1/meal-plans/preferences")).body).toEqual({ data: null });
+    await owner
+      .put("/api/v1/meal-plans/preferences")
+      .send({ startDate: "2026-12-01", endDate: "2026-12-02" });
+    for (const invalid of [
+      { startDate: "2026-11-12", endDate: "2026-11-04" },
+      { startDate: "2026-11-01", endDate: "2026-12-02" },
+      { startDate: "2026-11-04" },
+    ])
+      expect((await agent.put("/api/v1/meal-plans/preferences").send(invalid)).status).toBe(400);
+    expect((await agent.get("/api/v1/meal-plans/preferences")).body).toEqual({ data: range });
+    const guest = newAgent();
+    expect((await guest.get("/api/v1/meal-plans/preferences")).status).toBe(401);
+    expect((await guest.put("/api/v1/meal-plans/preferences").send(range)).status).toBe(401);
+    const user = await prisma.user.findFirstOrThrow({
+      where: { mealPlanStartDate: new Date("2026-11-04T00:00:00Z") },
+    });
+    expect(user.mealPlanEndDate?.toISOString().slice(0, 10)).toBe(range.endDate);
+    await expect(
+      prisma.user.update({ where: { id: user.id }, data: { mealPlanEndDate: null } }),
+    ).rejects.toThrow();
+  });
+});

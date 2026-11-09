@@ -17,7 +17,7 @@ export function AdjustStockForm({ item, onClose }: { item: PantryItem; onClose: 
       <p className="text-sm text-muted-foreground">
         Current stock: {item.quantity} {item.ingredient.unit}
       </p>
-      <div className="grid grid-cols-[minmax(0,1fr)_6rem] items-start gap-3 rounded-lg border p-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_6rem] items-start gap-3 rounded-xl bg-muted/20 p-3">
         <SelectField
           control={form.control}
           name="direction"

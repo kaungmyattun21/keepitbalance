@@ -15,7 +15,7 @@ export function CashFlowCard({ summary }: { summary: TransactionSummary }) {
   return (
     <section
       aria-labelledby="cash-flow-heading"
-      className="flex min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-5 sm:p-6"
+      className="flex h-full min-w-0 flex-col rounded-2xl bg-card p-5 sm:p-6"
     >
       <div className="flex items-center justify-between gap-3">
         <h2 id="cash-flow-heading" className="text-base font-medium tracking-tight">
@@ -57,7 +57,7 @@ export function CashFlowCard({ summary }: { summary: TransactionSummary }) {
           </div>
         ))}
       </dl>
-      <div className="mt-auto border-t border-border/60 pt-4">
+      <div className="mt-auto pt-4">
         <p
           className={cn(
             "flex items-center gap-2 text-sm font-medium",

@@ -40,13 +40,13 @@ export function RecipeForm({ recipe, onClose }: { recipe?: Recipe; onClose: () =
       </div>
       <div>
         <p className="mb-2 text-sm font-medium">Ingredients for the full recipe</p>
-        <div className="rounded-xl border border-border/60">
+        <div className="rounded-xl bg-muted/20">
           {fields.fields.map((field, index) => {
             const unit = ingredients.find((ingredient) => ingredient.id === rows[index]?.ingredientId)?.unit;
             return (
               <fieldset
                 key={field.id}
-                className="grid min-w-0 grid-cols-[minmax(0,1fr)_5rem_2rem] gap-2 border-b border-border/60 p-3 [&_[data-slot=field-label]]:sr-only"
+                className="grid min-w-0 grid-cols-[minmax(0,1fr)_5rem_2rem] gap-2 p-3 [&_[data-slot=field-label]]:sr-only"
               >
                 <legend className="sr-only">Recipe ingredient {index + 1}</legend>
                 <IngredientPicker

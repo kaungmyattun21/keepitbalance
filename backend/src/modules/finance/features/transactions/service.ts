@@ -75,6 +75,7 @@ export async function summarizeTransactions(
     month,
     categorySums,
     categoryNames: new Map(categories.map((category) => [category.id, category.name])),
+    categoryIcons: new Map(categories.map((category) => [category.id, category.icon])),
     typeFilter: query.type,
   });
 }
@@ -113,6 +114,13 @@ export async function updateTransaction(
 export async function deleteTransaction(userId: string, transactionId: string): Promise<void> {
   const existing = await repository.findTransaction(transactionId, userId);
   if (!existing) throw notFound("Transaction not found");
+
+  if (existing.receipt) {
+    throw conflict(
+      "CONFLICT",
+      "A receipt purchase can't be deleted. You can edit its amount, date, note or category.",
+    );
+  }
 
   if (existing.shoppingListId) {
     throw conflict(

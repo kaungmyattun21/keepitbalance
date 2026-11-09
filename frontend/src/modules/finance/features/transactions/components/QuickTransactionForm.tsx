@@ -107,7 +107,7 @@ function EntryForm({ categories, onSaved }: { categories: Category[]; onSaved: (
             )}
           </div>
         </fieldset>
-        <div className="shrink-0 border-t border-border/60 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {keypadOpen ? (
             <div role="group" aria-label="Amount keypad" className="mb-3 grid grid-cols-3 gap-1.5">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "Backspace"].map((key) => (

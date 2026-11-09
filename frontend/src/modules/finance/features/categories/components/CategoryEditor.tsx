@@ -1,3 +1,4 @@
+import { CategoryIconPicker } from "./CategoryIconPicker.tsx";
 import type { CategoryEditorOptions } from "../types.ts";
 import { useCategoryForm } from "../hooks/use-category-form.ts";
 import { FieldIdScope } from "@/shared/components/form/FieldIdScope";
@@ -10,7 +11,11 @@ export function CategoryEditor({ group, groups, category, onClose }: CategoryEdi
   const { form, error, isPending, handleSubmit } = useCategoryForm({ group, category, onClose });
   return (
     <FieldIdScope>
-      <form noValidate onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-4 rounded-lg border p-4">
+      <form
+        noValidate
+        onSubmit={handleSubmit}
+        className="flex min-w-0 flex-col gap-4 rounded-xl bg-muted/20 p-4"
+      >
         <FormAlert message={error} />
         <TextField control={form.control} name="name" label="Category name" />
         <SelectField
@@ -22,6 +27,7 @@ export function CategoryEditor({ group, groups, category, onClose }: CategoryEdi
             .filter((entry) => entry.type === group.type)
             .map((entry) => ({ value: entry.id, label: entry.name }))}
         />
+        <CategoryIconPicker control={form.control} disabled={isPending} />
         <div className="flex flex-wrap gap-2">
           <Button disabled={isPending} type="submit">
             {isPending ? "Saving…" : "Save category"}

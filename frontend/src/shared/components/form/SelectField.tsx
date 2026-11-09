@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Controller, type Control, type FieldValues, type Path } from "react-hook-form";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/shared/components/ui/field";
 import {
@@ -12,7 +13,7 @@ import {
 import { fieldAria } from "./field-aria.ts";
 import { useFieldIdPrefix } from "./field-id-scope.ts";
 
-export type SelectOption = { value: string; label: string; group?: string };
+export type SelectOption = { value: string; label: string; group?: string; icon?: ReactNode };
 
 type SelectFieldProps<T extends FieldValues> = {
   control: Control<T>;
@@ -66,7 +67,14 @@ export function SelectField<T extends FieldValues>({
                       .filter((option) => option.group === group)
                       .map((option) => (
                         <SelectItem key={option.value} value={option.value}>
-                          {option.label}
+                          {option.icon ? (
+                            <span className="flex items-center gap-2">
+                              {option.icon}
+                              {option.label}
+                            </span>
+                          ) : (
+                            option.label
+                          )}
                         </SelectItem>
                       ))}
                   </SelectGroup>

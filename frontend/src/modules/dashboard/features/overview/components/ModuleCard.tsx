@@ -13,14 +13,14 @@ export function ModuleCard({ title, description, icon: Icon, to }: ModuleCardPro
   return (
     <article
       className={cn(
-        "group relative flex h-full flex-col gap-7 rounded-2xl border border-border/70 bg-card p-6 text-card-foreground transition-colors sm:p-7",
-        to && "hover:border-foreground/25 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring",
+        "group relative flex h-full flex-col gap-7 rounded-2xl bg-card p-6 text-card-foreground transition-colors sm:p-7",
+        to && "has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring",
       )}
     >
       <span
         className={cn(
           "flex size-10 items-center justify-center rounded-xl",
-          to ? "border border-brand/10 bg-brand-subtle/60 text-brand" : "bg-muted text-muted-foreground",
+          to ? "bg-brand-subtle/60 text-brand" : "bg-muted text-muted-foreground",
         )}
       >
         <Icon className="size-5" aria-hidden />

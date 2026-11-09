@@ -61,16 +61,18 @@ enum ShoppingListStatus {
 // ---------------------------------------------------------------------------
 
 model User {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String
-  email            String   @unique // stored lowercase by Better Auth
-  emailVerified    Boolean  @default(false) @map("email_verified")
-  image            String? // avatar URL, e.g. from Google
-  dailyCalorieGoal Int      @default(2000) @map("daily_calorie_goal")
-  dailyWaterGoalMl Int      @default(2000) @map("daily_water_goal_ml")
-  timezone         String   @default("UTC") // IANA name, e.g. "Asia/Bangkok"
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  email             String    @unique // stored lowercase by Better Auth
+  emailVerified     Boolean   @default(false) @map("email_verified")
+  image             String? // avatar URL, e.g. from Google
+  dailyCalorieGoal  Int       @default(2000) @map("daily_calorie_goal")
+  dailyWaterGoalMl  Int       @default(2000) @map("daily_water_goal_ml")
+  timezone          String    @default("UTC") // IANA name, e.g. "Asia/Bangkok"
+  mealPlanStartDate DateTime? @map("meal_plan_start_date") @db.Date
+  mealPlanEndDate   DateTime? @map("meal_plan_end_date") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   sessions          Session[]
   accounts          Account[]
@@ -80,6 +82,7 @@ model User {
   categoryGroups  CategoryGroup[]
   categories      Category[]
   transactions    Transaction[]
+  receipts        Receipt[]
   budgets         Budget[]
   bills           Bill[]
   ingredients     Ingredient[]
@@ -174,6 +177,7 @@ model Category {
   groupId   String          @map("group_id") @db.Uuid
   type      TransactionType
   name      String
+  icon      String?         @db.VarChar(32)
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -207,9 +211,43 @@ model Transaction {
   // Composite FK: the category must belong to the SAME user and have the SAME type.
   category     Category      @relation(fields: [categoryId, userId, type], references: [id, userId, type], onDelete: Restrict, map: "transactions_category_fkey")
   shoppingList ShoppingList? @relation(fields: [shoppingListId], references: [id], onDelete: NoAction)
+  receipt      Receipt?
 
   @@index([userId, date])
   @@map("transactions")
+}
+
+// The receipt survives queue history cleanup; only confirmation creates an expense.
+model Receipt {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  contentHash   String   @map("content_hash") @db.VarChar(64)
+  status        String   @default("queued") @db.VarChar(20)
+  version       Int      @default(1)
+  jobId         String?  @map("job_id") @db.Uuid
+  draft         Json?
+  rawText       String?  @map("raw_text")
+  error         String?
+  transactionId String?  @unique @map("transaction_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction?  @relation(fields: [transactionId], references: [id], onDelete: NoAction)
+  image       ReceiptImage?
+
+  @@unique([userId, contentHash])
+  @@index([userId, createdAt])
+  @@map("receipts")
+}
+
+model ReceiptImage {
+  receiptId   String  @id @map("receipt_id") @db.Uuid
+  contentType String  @map("content_type")
+  data        Bytes
+  receipt     Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@map("receipt_images")
 }
 
 // A monthly spending limit for one expense category (FR-15, D-027).

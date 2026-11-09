@@ -1,7 +1,8 @@
+import { CategoryIcon } from "../../../shared/components/CategoryIcon";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createBillSchema, type CreateBillInput, type CreateBillValues } from "@keepitbalance/shared/finance";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { ApiError } from "@/shared/lib/api";
@@ -28,7 +29,12 @@ export function useBillForm({ bill, groups, today, onSaved }: BillFormOptions) {
   const categoryOptions = groups
     .filter((group) => group.type === "expense")
     .flatMap((group) =>
-      group.categories.map((category) => ({ value: category.id, label: category.name, group: group.name })),
+      group.categories.map((category) => ({
+        value: category.id,
+        label: category.name,
+        group: group.name,
+        icon: createElement(CategoryIcon, { icon: category.icon, className: "size-6 rounded-lg" }),
+      })),
     );
 
   async function save(values: CreateBillValues) {

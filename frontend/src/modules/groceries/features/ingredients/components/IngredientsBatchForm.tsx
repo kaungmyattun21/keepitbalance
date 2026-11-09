@@ -20,7 +20,7 @@ export function IngredientsBatchForm({ onClose }: { onClose: () => void }) {
       <p className="text-sm text-muted-foreground">
         Add up to {GROCERY_BATCH_MAX} ingredients. Each name must be unique. Everything saves together.
       </p>
-      <div className="rounded-lg border">
+      <div className="rounded-xl bg-muted/20">
         <div
           aria-hidden="true"
           className="grid grid-cols-[minmax(0,1fr)_7.5rem_2rem] gap-2 rounded-t-lg bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground"
@@ -31,7 +31,7 @@ export function IngredientsBatchForm({ onClose }: { onClose: () => void }) {
         {fields.map((field, index) => (
           <fieldset
             key={field.id}
-            className="grid min-w-0 grid-cols-[minmax(0,1fr)_7.5rem_2rem] items-start gap-2 border-t p-3 [&_[data-slot=field-label]]:sr-only"
+            className="grid min-w-0 grid-cols-[minmax(0,1fr)_7.5rem_2rem] items-start gap-2 p-3 [&_[data-slot=field-label]]:sr-only"
           >
             <legend className="sr-only">Ingredient {index + 1}</legend>
             <TextField

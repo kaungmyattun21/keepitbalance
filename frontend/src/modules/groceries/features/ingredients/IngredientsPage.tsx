@@ -56,7 +56,7 @@ export function IngredientsPage() {
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-border/60">
+          <ul className="space-y-1">
             {filtered.map((ingredient) => (
               <li key={ingredient.id} className="flex items-center justify-between gap-3 py-4">
                 <div className="min-w-0 flex-1">

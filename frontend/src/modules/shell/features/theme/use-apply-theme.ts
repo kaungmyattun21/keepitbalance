@@ -12,7 +12,7 @@ export function useApplyTheme() {
       // Match mobile browser chrome to the selected app theme, including manual overrides.
       document
         .querySelector('meta[name="theme-color"]')
-        ?.setAttribute("content", dark ? "#040a17" : "#f7f9fa");
+        ?.setAttribute("content", dark ? "#040a17" : "#f7f3eb");
     };
 
     apply();

@@ -30,7 +30,7 @@ const moduleZones = MODULES.flatMap((target) =>
 
 const layerZones = [
   {
-    target: ["./src/app.ts", "./src/server.ts"],
+    target: ["./src/app.ts", "./src/server.ts", "./src/worker.ts"],
     from: "./src/modules",
     except: MODULES.map((name) => `./${name}/index.ts`),
     message: "Import modules through their public API: modules/<name>/index.ts.",

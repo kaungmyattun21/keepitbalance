@@ -26,7 +26,7 @@ export function CheckoutForm({
       onCancel={onClose}
       submitLabel="Complete shopping"
     >
-      <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
+      <div className="rounded-xl bg-muted/25 p-4">
         <p className="mb-3 font-medium">Purchased items ({bought.length})</p>
         <ul className="space-y-2 text-sm text-muted-foreground">
           {bought.map((item) => (
@@ -36,9 +36,7 @@ export function CheckoutForm({
             </li>
           ))}
         </ul>
-        <p className="mt-4 border-t border-border/60 pt-3 text-sm font-medium tabular-nums">
-          Item total: {formatMoney(totals.amount)}
-        </p>
+        <p className="mt-4 pt-3 text-sm font-medium tabular-nums">Item total: {formatMoney(totals.amount)}</p>
         {totals.missingPrices > 0 && (
           <p className="mt-1 text-sm text-muted-foreground">
             {totals.missingPrices} purchased items have no price. Enter the full receipt total below.

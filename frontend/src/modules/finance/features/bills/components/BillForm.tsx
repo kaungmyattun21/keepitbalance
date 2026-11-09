@@ -50,7 +50,7 @@ export function BillForm({ onCancel, ...options }: BillFormOptions & { onCancel:
             />
           </FieldGroup>
         </div>
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t px-6 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+        <div className="flex shrink-0 flex-col-reverse gap-2 px-6 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>

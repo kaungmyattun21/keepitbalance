@@ -1,3 +1,4 @@
+import { CategoryIcon } from "../../../shared/components/CategoryIcon";
 import type { Category, CategoryGroup } from "@keepitbalance/shared/finance";
 import { useState } from "react";
 import { SectionCard } from "@/shared/components/SectionCard";
@@ -51,7 +52,7 @@ export function CategoryGroupCard({ group, groups }: { group: CategoryGroup; gro
           No categories yet. Add one to start tracking spending or income.
         </p>
       )}
-      <ul className="divide-y">
+      <ul className="space-y-1">
         {group.categories.map((category) => (
           <li key={category.id} className="py-3">
             {typeof editor === "object" && editor?.id === category.id ? (
@@ -63,7 +64,10 @@ export function CategoryGroupCard({ group, groups }: { group: CategoryGroup; gro
               />
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="min-w-0 flex-1 font-medium wrap-anywhere">{category.name}</span>
+                <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
+                  <CategoryIcon icon={category.icon} />
+                  <span className="min-w-0 wrap-anywhere">{category.name}</span>
+                </span>
                 <div className="flex gap-2">
                   <Button
                     size="sm"

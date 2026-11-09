@@ -14,7 +14,7 @@ export function PantryForm({ item, onClose }: { item?: PantryItem; onClose: () =
       onCancel={onClose}
       submitLabel="Save pantry item"
     >
-      <div className="rounded-lg border">
+      <div className="rounded-xl bg-muted/20">
         <div
           aria-hidden="true"
           className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3 rounded-t-lg bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground"
@@ -22,7 +22,7 @@ export function PantryForm({ item, onClose }: { item?: PantryItem; onClose: () =
           <span>Ingredient</span>
           <span>Quantity</span>
         </div>
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_6rem] items-start gap-3 border-t p-3 [&_[data-slot=field-label]]:sr-only">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_6rem] items-start gap-3 p-3 [&_[data-slot=field-label]]:sr-only">
           {item ? (
             <p className="flex min-h-9 min-w-0 items-center text-sm font-medium">
               {item.ingredient.name} ({item.ingredient.unit})

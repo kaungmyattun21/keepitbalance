@@ -14,7 +14,7 @@ export function ComingSoonSection({ title, description, icon: Icon }: ComingSoon
   return (
     <section
       aria-labelledby={headingId}
-      className="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-card/50 px-6 py-16 text-center"
+      className="flex flex-col items-center gap-4 rounded-xl bg-card px-6 py-16 text-center"
     >
       <DocumentTitle title={title} />
       <span className="flex size-12 items-center justify-center rounded-full bg-brand-subtle text-brand">

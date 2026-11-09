@@ -10,7 +10,7 @@ const transactionSelect = {
   shoppingListId: true,
   createdAt: true,
   updatedAt: true,
-  category: { select: { id: true, name: true, type: true, groupId: true } },
+  category: { select: { id: true, name: true, type: true, groupId: true, icon: true } },
 } satisfies Prisma.TransactionSelect;
 
 export type TransactionRow = Prisma.TransactionGetPayload<{ select: typeof transactionSelect }>;
@@ -62,7 +62,13 @@ export async function findTransactionPage(
 export function findTransaction(id: string, userId: string) {
   return prisma.transaction.findFirst({
     where: { id, userId },
-    select: { id: true, type: true, categoryId: true, shoppingListId: true },
+    select: {
+      id: true,
+      type: true,
+      categoryId: true,
+      shoppingListId: true,
+      receipt: { select: { id: true } },
+    },
   });
 }
 
@@ -91,6 +97,6 @@ export type CategorySumRow = Awaited<ReturnType<typeof sumAmountsByCategory>>[nu
 export function findCategoryNames(userId: string, categoryIds: string[]) {
   return prisma.category.findMany({
     where: { userId, id: { in: categoryIds } },
-    select: { id: true, name: true },
+    select: { id: true, name: true, icon: true },
   });
 }

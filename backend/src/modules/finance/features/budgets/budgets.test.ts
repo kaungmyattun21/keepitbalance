@@ -70,14 +70,26 @@ describe("GET /api/v1/budgets", () => {
     ).toEqual([
       {
         id: expect.any(String),
-        category: { groupId: eatingOut.groupId, id: eatingOut.id, name: "Eating out", type: "expense" },
+        category: {
+          icon: null,
+          groupId: eatingOut.groupId,
+          id: eatingOut.id,
+          name: "Eating out",
+          type: "expense",
+        },
         amount: "100.00",
         spent: "112.50",
         remaining: "-12.50",
       },
       {
         id: expect.any(String),
-        category: { groupId: groceries.groupId, id: groceries.id, name: "Groceries", type: "expense" },
+        category: {
+          icon: null,
+          groupId: groceries.groupId,
+          id: groceries.id,
+          name: "Groceries",
+          type: "expense",
+        },
         amount: "420.00",
         spent: "389.80",
         remaining: "30.20",

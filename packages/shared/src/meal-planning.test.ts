@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   mondayOf,
+  planningDateRangeSchema,
+  planningPeriodSchema,
+  resolvePlanningPeriod,
   shiftDay,
   recipeSchema,
   recipeImageSchema,
@@ -46,6 +49,25 @@ describe("meal planning schemas", () => {
       { contentType: "image/png", data: "a".repeat(4 * Math.ceil(RECIPE_IMAGE_MAX_BYTES / 3) + 4) },
     ])
       expect(recipeImageSchema.safeParse(image).success).toBe(false);
+  });
+  it("accepts inclusive custom ranges and rejects reversed, oversized or incomplete ranges", () => {
+    const period = { startDate: "2026-10-28", endDate: "2026-11-03" };
+    expect(planningDateRangeSchema.parse(period)).toEqual(period);
+    expect(resolvePlanningPeriod(period)).toEqual({ ...period, weekStart: "2026-10-26" });
+    expect(planningPeriodSchema.safeParse({ weekStart: "2026-10-26" }).success).toBe(true);
+    expect(
+      planningDateRangeSchema.safeParse({ startDate: "2026-11-01", endDate: "2026-12-01" }).success,
+    ).toBe(true);
+    for (const values of [
+      { startDate: "2026-11-03", endDate: "2026-11-02" },
+      { startDate: "2026-11-01", endDate: "2026-12-02" },
+      { startDate: "2026-02-30", endDate: "2026-03-02" },
+      { startDate: "2026-11-01" },
+      { startDate: "9999-12-31", endDate: "9999-12-31" },
+      { ...period, weekStart: "2026-10-26" },
+    ])
+      expect(planningPeriodSchema.safeParse(values).success).toBe(false);
+    expect(applyGenerationSchema.safeParse({ ...period, token: "a".repeat(64) }).success).toBe(true);
   });
   it("handles calendar weeks and rejects malformed or partial weeks without throwing", () => {
     expect(mondayOf("2026-11-01")).toBe("2026-10-26");

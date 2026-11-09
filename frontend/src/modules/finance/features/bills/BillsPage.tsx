@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import type { Bill } from "@keepitbalance/shared/finance";
 import { todayIn } from "@keepitbalance/shared/dates";
-import { CalendarClock, Plus } from "lucide-react";
+import { CalendarClock, CheckCircle2, Plus } from "lucide-react";
 import { useCurrentUser } from "@/modules/auth";
 import { DocumentTitle } from "@/shared/components/DocumentTitle";
 import { Button } from "@/shared/components/ui/button";
@@ -31,6 +31,8 @@ export function BillsPage() {
   const [paying, setPaying] = useState<Bill | null>(null);
   const [deleting, setDeleting] = useState<Bill | null>(null);
   const closeEditor = () => setEditor(null);
+  const paid = bills.filter((bill) => bill.lastPaidDate !== null && bill.nextDueDate > today);
+  const outstanding = bills.filter((bill) => bill.lastPaidDate === null || bill.nextDueDate <= today);
 
   return (
     <Sheet open={editor !== null} onOpenChange={(open) => !open && closeEditor()}>
@@ -62,7 +64,7 @@ export function BillsPage() {
         {bills.length === 0 && (
           <section
             aria-label="No bills yet"
-            className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card/50 px-6 py-14 text-center"
+            className="flex flex-col items-center gap-3 rounded-xl bg-card px-6 py-14 text-center"
           >
             <CalendarClock className="size-8 text-brand" aria-hidden />
             <h3 className="text-lg font-semibold">No bills yet</h3>
@@ -71,24 +73,43 @@ export function BillsPage() {
             </p>
           </section>
         )}
+        {paid.length > 0 && outstanding.length === 0 && (
+          <div role="status" className="flex items-start gap-3 rounded-2xl bg-brand-subtle/40 p-4">
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-brand" aria-hidden />
+            <div>
+              <p className="text-sm font-medium">All bills paid for now</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Your next recurring payments are listed below.
+              </p>
+            </div>
+          </div>
+        )}
         <BillList
           title="Overdue"
           overdue
-          bills={bills.filter((bill) => bill.nextDueDate < today)}
+          bills={outstanding.filter((bill) => bill.nextDueDate < today)}
           onEdit={setEditor}
           onPay={setPaying}
           onDelete={setDeleting}
         />
         <BillList
           title="Due today"
-          bills={bills.filter((bill) => bill.nextDueDate === today)}
+          bills={outstanding.filter((bill) => bill.nextDueDate === today)}
           onEdit={setEditor}
           onPay={setPaying}
           onDelete={setDeleting}
         />
         <BillList
           title="Upcoming"
-          bills={bills.filter((bill) => bill.nextDueDate > today)}
+          bills={outstanding.filter((bill) => bill.nextDueDate > today)}
+          onEdit={setEditor}
+          onPay={setPaying}
+          onDelete={setDeleting}
+        />
+        <BillList
+          title="Paid"
+          paid
+          bills={paid}
           onEdit={setEditor}
           onPay={setPaying}
           onDelete={setDeleting}

@@ -14,6 +14,7 @@ export function toTransactionResponse(row: TransactionRow): Transaction {
       groupId: row.category.groupId,
       id: row.category.id,
       name: row.category.name,
+      icon: row.category.icon,
       type: toApiType[row.category.type],
     },
     shoppingListId: row.shoppingListId,

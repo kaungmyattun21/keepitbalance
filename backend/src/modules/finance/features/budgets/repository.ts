@@ -5,7 +5,14 @@ const budgetSelect = {
   id: true,
   amount: true,
   category: {
-    select: { id: true, name: true, type: true, groupId: true, group: { select: { id: true, name: true } } },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      groupId: true,
+      icon: true,
+      group: { select: { id: true, name: true } },
+    },
   },
 } satisfies Prisma.BudgetSelect;
 

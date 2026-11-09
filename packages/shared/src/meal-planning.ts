@@ -21,6 +21,34 @@ export const weekQuerySchema = z.object({
   ),
 });
 export type WeekQuery = z.output<typeof weekQuerySchema>;
+export const planningDateRangeSchema = z
+  .object({
+    startDate: calendarDateSchema,
+    endDate: calendarDateSchema,
+  })
+  .superRefine(({ startDate, endDate }, context) => {
+    if (!calendarDateSchema.safeParse(startDate).success || !calendarDateSchema.safeParse(endDate).success)
+      return;
+    const days = (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86400000 + 1;
+    if (days < 1)
+      context.addIssue({
+        code: "custom",
+        path: ["endDate"],
+        message: "End date must be on or after start date.",
+      });
+    if (days > 31)
+      context.addIssue({ code: "custom", path: ["endDate"], message: "Choose a range of up to 31 days." });
+    if (endDate === "9999-12-31")
+      context.addIssue({ code: "custom", path: ["endDate"], message: "Choose an earlier end date." });
+  });
+export type PlanningDateRange = z.output<typeof planningDateRangeSchema>;
+export const planningPeriodSchema = z.union([planningDateRangeSchema.strict(), weekQuerySchema.strict()]);
+export type PlanningPeriod = z.output<typeof planningPeriodSchema>;
+export function resolvePlanningPeriod(period: PlanningPeriod) {
+  return "weekStart" in period
+    ? { weekStart: period.weekStart, startDate: period.weekStart, endDate: shiftDay(period.weekStart, 6) }
+    : { ...period, weekStart: mondayOf(period.startDate) };
+}
 const servingsSchema = z.coerce
   .number<string | number>()
   .int()
@@ -108,14 +136,21 @@ export type GenerationRow = {
 };
 export type GenerationPreview = {
   weekStart: string;
+  startDate: string;
+  endDate: string;
   token: string;
   listId: string | null;
   listWeekStart: string | null;
   mealCount: number;
   rows: GenerationRow[];
 };
-export const applyGenerationSchema = weekQuerySchema.extend({
-  token: z.string().regex(/^[a-f0-9]{64}$/, "Refresh the shopping preview."),
-});
+export const applyGenerationSchema = z.union([
+  planningDateRangeSchema
+    .safeExtend({ token: z.string().regex(/^[a-f0-9]{64}$/, "Refresh the shopping preview.") })
+    .strict(),
+  weekQuerySchema
+    .extend({ token: z.string().regex(/^[a-f0-9]{64}$/, "Refresh the shopping preview.") })
+    .strict(),
+]);
 export type ApplyGenerationValues = z.output<typeof applyGenerationSchema>;
 export type GenerationResult = { data: ShoppingList | null; addedCount: number; reviewCount: number };

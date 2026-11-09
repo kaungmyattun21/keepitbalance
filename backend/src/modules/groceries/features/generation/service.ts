@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import {
   shiftDay,
+  resolvePlanningPeriod,
+  type PlanningPeriod,
   type ApplyGenerationValues,
   type GenerationPreview,
   type GenerationResult,
@@ -13,7 +15,8 @@ import { cents, quantity, requiredQuantities } from "./calculation.ts";
 import * as repository from "./repository.ts";
 
 type Snapshot = Awaited<ReturnType<typeof repository.snapshot>>;
-function makePreview(userId: string, weekStart: string, state: Snapshot): GenerationPreview {
+function makePreview(userId: string, period: PlanningPeriod, state: Snapshot): GenerationPreview {
+  const { weekStart, startDate, endDate } = resolvePlanningPeriod(period);
   const meals = state.meals.filter((meal) => !meal.eaten);
   let needs: Map<string, string>;
   try {
@@ -59,37 +62,40 @@ function makePreview(userId: string, weekStart: string, state: Snapshot): Genera
     .sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name));
   return {
     weekStart,
-    token: createHash("sha256").update(JSON.stringify({ userId, weekStart, state })).digest("hex"),
+    startDate,
+    endDate,
+    token: createHash("sha256").update(JSON.stringify({ userId, startDate, endDate, state })).digest("hex"),
     listId: state.list?.id ?? null,
     listWeekStart: state.list?.weekStart.toISOString().slice(0, 10) ?? null,
     mealCount: meals.length,
     rows,
   };
 }
-function weekRange(weekStart: string) {
+function periodRange(period: PlanningPeriod) {
+  const { startDate, endDate } = resolvePlanningPeriod(period);
   return {
-    from: new Date(`${weekStart}T00:00:00.000Z`),
-    before: new Date(`${shiftDay(weekStart, 7)}T00:00:00.000Z`),
+    from: new Date(`${startDate}T00:00:00.000Z`),
+    before: new Date(`${shiftDay(endDate, 1)}T00:00:00.000Z`),
   };
 }
-export function preview(userId: string, weekStart: string) {
+export function preview(userId: string, period: PlanningPeriod) {
   return withGroceryWrite(userId, async (tx) => {
-    const { from, before } = weekRange(weekStart);
-    return makePreview(userId, weekStart, await repository.snapshot(tx, userId, from, before));
+    const { from, before } = periodRange(period);
+    return makePreview(userId, period, await repository.snapshot(tx, userId, from, before));
   });
 }
 export function apply(userId: string, input: ApplyGenerationValues): Promise<GenerationResult> {
   return groceryWrite(() =>
     withGroceryWrite(userId, async (tx) => {
-      const { from, before } = weekRange(input.weekStart);
+      const { from, before } = periodRange(input);
       const state = await repository.snapshot(tx, userId, from, before);
-      const current = makePreview(userId, input.weekStart, state);
+      const current = makePreview(userId, input, state);
       if (current.token !== input.token)
         throw conflict(
           "RESOURCE_CHANGED",
           "Your meals, pantry or shopping list changed. Refresh the preview before applying it.",
         );
-      if (current.listWeekStart && current.listWeekStart !== input.weekStart)
+      if (current.listWeekStart && current.listWeekStart !== current.weekStart)
         throw conflict(
           "SHOPPING_LIST_EXISTS",
           "Finish or delete the open shopping list for the other week first.",
@@ -97,7 +103,7 @@ export function apply(userId: string, input: ApplyGenerationValues): Promise<Gen
       const additions = current.rows.filter((row) => !row.blocked && row.toAdd !== "0.00");
       let list = state.list;
       if (additions.length) {
-        list ??= await repository.createList(tx, userId, from);
+        list ??= await repository.createList(tx, userId, new Date(`${current.weekStart}T00:00:00.000Z`));
         for (const row of additions) await repository.add(tx, list.id, row.ingredient.id, row.toAdd);
         list = await repository.touch(tx, list.id, list.updatedAt);
       }

@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, vi } from "vitest";
 import { prisma } from "../shared/db.ts";
 import { outbox } from "./outbox.ts";
+import { stopJobs } from "../shared/jobs.ts";
 
 vi.mock("../shared/mailer.ts", async () => {
   const { outbox } = await import("./outbox.ts");
@@ -19,5 +20,6 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  await stopJobs();
   await prisma.$disconnect();
 });

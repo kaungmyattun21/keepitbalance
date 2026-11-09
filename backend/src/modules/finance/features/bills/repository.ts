@@ -11,7 +11,7 @@ const billSelect = {
   nextDueDate: true,
   lastPaidDate: true,
   updatedAt: true,
-  category: { select: { id: true, name: true, type: true, groupId: true } },
+  category: { select: { id: true, name: true, type: true, groupId: true, icon: true } },
 } satisfies Prisma.BillSelect;
 export type BillRow = Prisma.BillGetPayload<{ select: typeof billSelect }>;
 
