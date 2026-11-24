@@ -142,6 +142,14 @@ export const listTransactionsQuerySchema = paginationQuerySchema.extend({
 
 export type ListTransactionsQuery = z.output<typeof listTransactionsQuerySchema>;
 
+export const categorySuggestionQuerySchema = z.object({
+  note: z.string().trim().min(1, "Note is required.").max(NOTE_MAX_LENGTH),
+});
+
+export type CategorySuggestionQuery = z.output<typeof categorySuggestionQuerySchema>;
+
+export type CategorySuggestion = { categoryId: string; type: TransactionType };
+
 export const transactionSummaryQuerySchema = z.object({
   month: monthSchema.optional(),
   type: transactionTypeSchema.optional(),

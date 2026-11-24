@@ -38,6 +38,9 @@
 - Generation preserves checked/priced items and flags excess quantities for review; stale previews must be refreshed
 - Finishing shopping updates pantry stock and records one expense against the selected category budget
 - Receipt uploads run local English/Thai OCR in a durable background job, with editable review before creating an expense
+- Voice entry in the transaction forms: say "coffee 85 yesterday" to fill amount, date, note and type. It uses the
+  browser's speech recognition (English, hidden where unsupported), suggests the category last used for the same note,
+  and never overwrites fields you typed yourself
 
 Marking a meal eaten records its status and calories. Pantry consumption is recorded separately with **Adjust stock**.
 

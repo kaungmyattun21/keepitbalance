@@ -476,3 +476,39 @@ describe("GET /api/v1/transactions/summary", () => {
     expect((await newAgent().get("/api/v1/transactions/summary")).status).toBe(401);
   });
 });
+
+describe("GET /api/v1/transactions/category-suggestion", () => {
+  async function save(owner: Agent, email: string, category: string, note: string, date: string) {
+    const { id } = await categoryOf(email, "EXPENSE", category);
+    const response = await owner
+      .post("/api/v1/transactions")
+      .send({ type: "expense", amount: "85", date, categoryId: id, note });
+    expect(response.status).toBe(201);
+    return id;
+  }
+
+  it("suggests the category most recently used for the same note, ignoring case", async () => {
+    await save(agent, testUser.email, "Groceries", "Coffee", "2026-09-01");
+    const latest = await save(agent, testUser.email, "Eating out", "coffee", "2026-09-10");
+
+    const response = await agent.get("/api/v1/transactions/category-suggestion?note=COFFEE");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ data: { categoryId: latest, type: "expense" } });
+  });
+
+  it("returns null for unknown notes and never uses another user's history", async () => {
+    const otherAgent = newAgent();
+    await signUp(otherAgent, otherUser);
+    await save(otherAgent, otherUser.email, "Groceries", "Rice", "2026-09-01");
+
+    const response = await agent.get("/api/v1/transactions/category-suggestion?note=Rice");
+
+    expect(response.body).toEqual({ data: null });
+  });
+
+  it("validates the query and requires a session", async () => {
+    expect((await agent.get("/api/v1/transactions/category-suggestion?note=%20")).status).toBe(400);
+    expect((await newAgent().get("/api/v1/transactions/category-suggestion?note=x")).status).toBe(401);
+  });
+});

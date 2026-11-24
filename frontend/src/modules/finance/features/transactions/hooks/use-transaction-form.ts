@@ -9,14 +9,16 @@ import {
 } from "@keepitbalance/shared/finance";
 import { useQueryClient } from "@tanstack/react-query";
 import { createElement, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useFormState, useWatch } from "react-hook-form";
 import type { ReceiptDraft } from "@keepitbalance/shared/receipts";
+import { parseQuickEntry, type QuickEntry } from "@keepitbalance/shared/quick-entry";
 import { toast } from "sonner";
 import { ApiError } from "@/shared/lib/api";
 import { formatMoney } from "@/shared/lib/format";
 import { useCategoryGroups } from "../../../shared/hooks/use-category-groups.ts";
 import { financeKeys } from "../../../shared/query-keys.ts";
 import type { TransactionFormField, TransactionFormOptions } from "../types.ts";
+import { useCategorySuggestion } from "./use-category-suggestion.ts";
 import { useCreateTransaction } from "./use-create-transaction.ts";
 import { useUpdateTransaction } from "./use-update-transaction.ts";
 
@@ -57,6 +59,9 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
     defaultValues: transaction ? formValuesOf(transaction) : emptyFormValues(today),
   });
 
+  // Subscribes to dirty state so getFieldState can tell user edits from spoken ones.
+  useFormState({ control: form.control, name: ["type", "amount", "date", "categoryId", "note"] });
+  const suggestCategory = useCategorySuggestion();
   const groups = useCategoryGroups();
   const selectedType = useWatch({ control: form.control, name: "type" });
   const receiptId = useWatch({ control: form.control, name: "receiptId" });
@@ -69,9 +74,51 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
       group: groups.find((group) => group.id === category.groupId)?.name,
     }));
 
-  function changeType(nextType: TransactionType) {
-    form.setValue("type", nextType);
+  function changeType(nextType: TransactionType, { byUser = true } = {}) {
+    form.setValue("type", nextType, { shouldDirty: byUser });
     form.setValue("categoryId", "");
+  }
+
+  // Spoken details fill only fields the user has not changed, so speaking again can
+  // correct an earlier attempt without overwriting anything typed by hand.
+  function applyVoiceEntry(text: string): QuickEntry {
+    const entry = parseQuickEntry(text, today);
+    const userEdited = (name: TransactionFormField) => Boolean(form.getFieldState(name).isDirty);
+    const fill = (name: "amount" | "date" | "note", value: string | undefined) => {
+      if (value && !userEdited(name)) form.setValue(name, value, { shouldValidate: name !== "note" });
+    };
+    const canChooseCategory = () => !userEdited("categoryId");
+    const canChangeType = () => !userEdited("type") && canChooseCategory();
+
+    if (entry.type && entry.type !== form.getValues("type") && canChangeType())
+      changeType(entry.type, { byUser: false });
+    fill("amount", entry.amount);
+    fill("date", entry.date);
+    fill("note", entry.note);
+
+    const note = entry.note;
+    if (note && canChooseCategory()) {
+      const chooseCategory = (categoryId: string) => {
+        const category = categories.find((option) => option.id === categoryId);
+        if (!category || !canChooseCategory()) return;
+        if (category.type !== form.getValues("type")) {
+          if (!canChangeType() || entry.type) return;
+          changeType(category.type, { byUser: false });
+        }
+        form.setValue("categoryId", category.id, { shouldValidate: true });
+      };
+      const named = categories.find(
+        (category) =>
+          category.name.toLowerCase() === note.toLowerCase() &&
+          category.type === (entry.type ?? form.getValues("type")),
+      );
+      if (named) chooseCategory(named.id);
+      else
+        void suggestCategory(note).then((suggestion) => {
+          if (suggestion) chooseCategory(suggestion.categoryId);
+        });
+    }
+    return entry;
   }
 
   async function submitTransaction(values: CreateTransactionValues) {
@@ -135,7 +182,7 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
     isShoppingExpense,
     selectedType,
     categoryOptions,
-    changeType,
+    changeType: (nextType: TransactionType) => changeType(nextType),
     receiptId,
     receiptUploading,
     setReceiptUploading,
@@ -145,6 +192,7 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
       if (draft.date) form.setValue("date", draft.date, { shouldDirty: true, shouldValidate: true });
       if (draft.merchant) form.setValue("note", draft.merchant, { shouldDirty: true });
     },
+    applyVoiceEntry,
     handleSubmit: form.handleSubmit(submitTransaction),
   };
 }

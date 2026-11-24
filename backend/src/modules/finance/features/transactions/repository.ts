@@ -64,6 +64,14 @@ export function findTransactionResponse(id: string, userId: string, tx: Prisma.T
   return tx.transaction.findFirst({ where: { id, userId }, select: transactionSelect });
 }
 
+export function findLatestCategoryForNote(userId: string, note: string) {
+  return prisma.transaction.findFirst({
+    where: { userId, note: { equals: note, mode: "insensitive" } },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    select: { category: { select: { id: true, type: true } } },
+  });
+}
+
 export async function findTransactionPage(
   filters: TransactionFilters,
   { page, pageSize }: PageRequest,

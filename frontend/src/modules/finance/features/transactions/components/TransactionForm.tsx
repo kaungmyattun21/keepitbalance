@@ -10,6 +10,7 @@ import { useTransactionForm } from "../hooks/use-transaction-form.ts";
 import type { TransactionFormOptions } from "../types.ts";
 import { TransactionTypeField } from "./TransactionTypeField.tsx";
 import { TransactionReceiptField } from "../../receipts/components/TransactionReceiptField.tsx";
+import { VoiceEntryButton } from "../../voice-entry/components/VoiceEntryButton.tsx";
 
 type TransactionFormProps = TransactionFormOptions & {
   onCancel?: () => void;
@@ -30,6 +31,7 @@ export function TransactionForm({ onCancel, ...options }: TransactionFormProps) 
     setReceiptUploading,
     selectReceipt,
     applyReceiptDraft,
+    applyVoiceEntry,
   } = useTransactionForm(options);
   const { isSubmitting } = form.formState;
   const submitLabel = isEditing ? "Save changes" : "Add transaction";
@@ -42,6 +44,9 @@ export function TransactionForm({ onCancel, ...options }: TransactionFormProps) 
 
         <FieldGroup>
           <TransactionTypeField value={selectedType} onChange={changeType} disabled={isShoppingExpense} />
+          {!isEditing && (
+            <VoiceEntryButton disabled={isSubmitting} onTranscript={(text) => applyVoiceEntry(text)} />
+          )}
           <TransactionReceiptField
             receiptId={receiptId}
             transactionId={options.transaction?.id}
