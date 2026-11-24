@@ -21,6 +21,13 @@ describe("parseQuickEntry", () => {
     expect(parse("taxi $15")).toMatchObject({ amount: "15", note: "Taxi" });
   });
 
+  it("reads thousands written with a space, as speech recognition often does", () => {
+    expect(parse("a laptop 23 000")).toEqual({ amount: "23000", note: "Laptop" });
+    expect(parse("rent 12 500 baht")).toMatchObject({ amount: "12500", note: "Rent" });
+    expect(parse("car 1 250 000")).toMatchObject({ amount: "1250000", note: "Car" });
+    expect(parse("the 2 tickets 900")).toMatchObject({ amount: "900", note: "2 tickets" });
+  });
+
   it("prefers a labelled amount, otherwise the largest number", () => {
     expect(parse("2 coffees 170")).toMatchObject({ amount: "170", note: "2 coffees" });
     expect(parse("3 shirts 600 baht at the mall 2")).toMatchObject({ amount: "600" });

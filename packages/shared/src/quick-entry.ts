@@ -11,11 +11,12 @@ const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "frida
 const INCOME = /\b(?:salary|income|got paid|paid me|received|refund(?:ed)?|bonus|earned|sold)\b/i;
 const CURRENCY_WORD = "baht|bucks|dollars?|thb|usd";
 const AMOUNT = new RegExp(
-  String.raw`(?<![\w.,])[$฿]?\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?:\s?(${CURRENCY_WORD}))?(?!\w)`,
+  // Speech recognition writes thousands with a comma or a space: "23,000" or "23 000".
+  String.raw`(?<![\w.,])[$฿]?\s?(\d{1,3}(?:[, ]\d{3})+(?!\d)|\d+)(?:\.(\d{1,2}))?(?:\s?(${CURRENCY_WORD}))?(?!\w)`,
   "gi",
 );
 const LEADING_WORDS =
-  /^(?:(?:i|and|then|just)\s+)*(?:spent|paid|bought|got paid|received|earned|expense|income|for|on|at|of)\b\s*/i;
+  /^(?:(?:i|and|then|just)\s+)*(?:spent|paid|bought|got paid|received|earned|expense|income|for|on|at|of|a|an|the)\b\s*/i;
 const TRAILING_WORDS = /\s*\b(?:for|on|at|of|and)$/i;
 
 function shiftDay(date: string, days: number): string {
@@ -51,12 +52,15 @@ function findDate(text: string, today: string): { date: string; phrase: string }
 }
 
 function findAmount(text: string): { amount: string; phrase: string } | null {
-  const candidates = [...text.matchAll(AMOUNT)].map((match) => ({
-    phrase: match[0],
-    value: Number(`${match[1]!.replaceAll(",", "")}.${match[2] ?? "0"}`),
-    amount: `${match[1]!.replaceAll(",", "")}${match[2] ? `.${match[2].padEnd(2, "0")}` : ""}`,
-    labelled: Boolean(match[3]) || /^[$฿]/.test(match[0]),
-  }));
+  const candidates = [...text.matchAll(AMOUNT)].map((match) => {
+    const whole = match[1]!.replace(/[, ]/g, "");
+    return {
+      phrase: match[0],
+      value: Number(`${whole}.${match[2] ?? "0"}`),
+      amount: `${whole}${match[2] ? `.${match[2].padEnd(2, "0")}` : ""}`,
+      labelled: Boolean(match[3]) || /^[$฿]/.test(match[0].trim()),
+    };
+  });
   const valid = candidates.filter((candidate) => candidate.value > 0);
   if (!valid.length) return null;
   // "2 coffees 170": a currency label wins, otherwise the largest number is the price.
