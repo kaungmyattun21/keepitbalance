@@ -1,4 +1,5 @@
 import type {
+  CategorySuggestionQuery,
   CreateTransactionValues,
   ListTransactionsQuery,
   TransactionParams,
@@ -21,6 +22,11 @@ export async function listTransactions(req: Request, res: Response) {
     req.query as unknown as ListTransactionsQuery,
   );
   res.json(transactionPage);
+}
+
+export async function suggestCategory(req: Request, res: Response) {
+  const { note } = req.query as CategorySuggestionQuery;
+  res.json({ data: await service.suggestCategory(getUserId(req), note) });
 }
 
 export async function getTransaction(req: Request, res: Response) {

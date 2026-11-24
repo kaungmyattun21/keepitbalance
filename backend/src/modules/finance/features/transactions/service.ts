@@ -1,6 +1,7 @@
 import type { Page } from "@keepitbalance/shared/api";
 import { currentMonthIn } from "@keepitbalance/shared/dates";
 import type {
+  CategorySuggestion,
   CreateTransactionValues,
   ListTransactionsQuery,
   Transaction,
@@ -11,7 +12,7 @@ import type {
 import type { Prisma, TransactionType as DbTransactionType } from "../../../../generated/prisma/client.ts";
 import { badRequest, conflict, notFound } from "../../../../shared/errors.ts";
 import { monthDateRange, toDbDate } from "../../shared/calendar-date.ts";
-import { toDbType } from "../../shared/transaction-type.ts";
+import { toApiType, toDbType } from "../../shared/transaction-type.ts";
 import * as repository from "./repository.ts";
 import { toTransactionResponse } from "./transaction-response.ts";
 import { toTransactionSummary } from "./transaction-summary.ts";
@@ -48,6 +49,11 @@ export async function createTransaction(
     : await repository.createTransaction(data);
 
   return toTransactionResponse(row);
+}
+
+export async function suggestCategory(userId: string, note: string): Promise<CategorySuggestion | null> {
+  const row = await repository.findLatestCategoryForNote(userId, note);
+  return row ? { categoryId: row.category.id, type: toApiType[row.category.type] } : null;
 }
 
 export async function getTransaction(userId: string, id: string): Promise<Transaction> {

@@ -1,4 +1,5 @@
 import {
+  categorySuggestionQuerySchema,
   createTransactionSchema,
   listTransactionsQuerySchema,
   transactionParamsSchema,
@@ -25,6 +26,13 @@ transactionRoutes.get(
   requireAuth,
   validate({ query: transactionSummaryQuerySchema }),
   controller.summarizeTransactions,
+);
+
+transactionRoutes.get(
+  "/category-suggestion",
+  requireAuth,
+  validate({ query: categorySuggestionQuerySchema }),
+  controller.suggestCategory,
 );
 
 transactionRoutes.post(

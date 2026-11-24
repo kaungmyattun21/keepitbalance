@@ -16,6 +16,7 @@ import { categoryGroupsQuery } from "../../../shared/hooks/use-category-groups.t
 import { useQuickTransactionForm } from "../hooks/use-quick-transaction-form.ts";
 import { TransactionTypeField } from "./TransactionTypeField.tsx";
 import { TransactionReceiptField } from "../../receipts/components/TransactionReceiptField.tsx";
+import { VoiceEntryButton } from "../../voice-entry/components/VoiceEntryButton.tsx";
 
 function EntryForm({ categories, onSaved }: { categories: Category[]; onSaved: () => void }) {
   const user = useCurrentUser();
@@ -35,6 +36,7 @@ function EntryForm({ categories, onSaved }: { categories: Category[]; onSaved: (
     receiptId,
     selectReceipt,
     applyReceiptDraft,
+    applyVoiceEntry,
     setReceiptUploading,
   } = useQuickTransactionForm({
     categories,
@@ -79,6 +81,12 @@ function EntryForm({ categories, onSaved }: { categories: Category[]; onSaved: (
             <FieldError id="quick-transaction-amount-error" errors={[form.formState.errors.amount]} />
           </div>
           <div className="grid min-w-0 gap-4">
+            <VoiceEntryButton
+              disabled={pending}
+              onTranscript={(text) => {
+                if (applyVoiceEntry(text).note) setNoteOpen(true);
+              }}
+            />
             <TransactionReceiptField
               receiptId={receiptId}
               disabled={pending}
