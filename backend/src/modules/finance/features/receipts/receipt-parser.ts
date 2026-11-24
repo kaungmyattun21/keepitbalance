@@ -23,6 +23,9 @@ export function parseReceipt(text: string, confidence?: number): ReceiptDraft {
     total,
     warnings: [
       "Check the suggested details against your receipt before saving.",
+      ...(total && lines.some((line) => /^[^\p{L}\p{N}]*OTAL?\b/iu.test(line))
+        ? ["The TOTAL label appears partially clipped. Check the suggested amount against the image."]
+        : []),
       ...(bankSlip
         ? [
             "This appears to be a bank transfer slip. The suggested merchant is the recipient, not the bank. Save it here only if it was an expense; transfers between your own accounts are not expenses.",

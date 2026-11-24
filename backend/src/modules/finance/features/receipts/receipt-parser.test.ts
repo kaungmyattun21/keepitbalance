@@ -118,4 +118,25 @@ describe("receipt parser", () => {
   it("warns when recognition confidence is low", () => {
     expect(parseReceipt("Shop\nTOTAL 10.00", 45).warnings.join(" ")).toContain("confidence is low");
   });
+
+  it("reads a clipped TOTAL with tax and cash context, keeping cash and change separate", () => {
+    const receipt = parseReceipt(
+      'CP Axtra PCL\n22-06-2025\n"OTA 509.00\nVAT 33.30\n{ ASH 1000.00\nCHANGE 491.00',
+    );
+    expect(receipt).toMatchObject({ date: "2025-06-22", total: "509.00" });
+    expect(receipt.warnings.join(" ")).toContain("partially clipped");
+    expect(parseReceipt("(9 Ass\nAxtra PCL บางบัวทอง\n22-06-2025\nTOTAL 509.00").merchant).toBe("CP Axtra");
+    expect(parseReceipt("Shop\nOTAL 509.00").total).toBeNull();
+    expect(parseReceipt("Shop\nOTAL 509.00\nCASH 1000.00").total).toBeNull();
+    expect(parseReceipt("Shop\nOTAL 509.00 FAB AR\nASH 1000 . 00\n# VAT INCLUDED #").total).toBe("509.00");
+    expect(parseReceipt("Shop\nOTAL 509.00\nOTAL 508.00\nASH 1000.00\nVAT 33.30").total).toBeNull();
+  });
+
+  it("uses a plain AMOUNT line only as a fallback total on the same line", () => {
+    expect(parseReceipt("Shop\nAMOUNT                                                   325.00").total).toBe(
+      "325.00",
+    );
+    expect(parseReceipt("Shop\nAMOUNT 325.00\nTOTAL 350.00").total).toBe("350.00");
+    expect(parseReceipt("Shop\nQTY\nAMOUNT\n12.00").total).toBeNull();
+  });
 });

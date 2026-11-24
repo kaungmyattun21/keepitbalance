@@ -8,7 +8,7 @@ import type {
   TransactionSummaryQuery,
   UpdateTransactionValues,
 } from "@keepitbalance/shared/finance";
-import type { TransactionType as DbTransactionType } from "../../../../generated/prisma/client.ts";
+import type { Prisma, TransactionType as DbTransactionType } from "../../../../generated/prisma/client.ts";
 import { badRequest, conflict, notFound } from "../../../../shared/errors.ts";
 import { monthDateRange, toDbDate } from "../../shared/calendar-date.ts";
 import { toDbType } from "../../shared/transaction-type.ts";
@@ -23,15 +23,36 @@ export async function createTransaction(
   const type = toDbType[input.type];
   await requireMatchingCategory(userId, input.categoryId, type);
 
-  const row = await repository.createTransaction({
+  const data = {
     userId,
     categoryId: input.categoryId,
     type,
     amount: input.amount,
     date: toDbDate(input.date),
     note: input.note ?? null,
-  });
+  };
+  const row = input.receiptId
+    ? await repository.withTransaction(async (tx) => {
+        const receipt = await repository.lockReceipt(tx, userId, input.receiptId!);
+        if (!receipt) throw notFound("Receipt not found");
+        // A retried submission of the same uploaded file returns its original transaction.
+        if (receipt.transactionId) {
+          const existing = await repository.findTransactionResponse(receipt.transactionId, userId, tx);
+          if (!existing) throw notFound("Transaction not found");
+          return existing;
+        }
+        const created = await repository.createTransaction(data, tx);
+        await repository.attachReceipt(tx, receipt.id, created.id);
+        return repository.findTransactionResponse(created.id, userId, tx).then((row) => row!);
+      })
+    : await repository.createTransaction(data);
 
+  return toTransactionResponse(row);
+}
+
+export async function getTransaction(userId: string, id: string): Promise<Transaction> {
+  const row = await repository.findTransactionResponse(id, userId);
+  if (!row) throw notFound("Transaction not found");
   return toTransactionResponse(row);
 }
 
@@ -100,13 +121,30 @@ export async function updateTransaction(
 
   await requireMatchingCategory(userId, input.categoryId, type);
 
-  const row = await repository.updateTransaction(transactionId, userId, {
+  const data = {
     categoryId: input.categoryId,
     type,
     amount: input.amount,
     date: toDbDate(input.date),
     note: input.note ?? null,
-  });
+  } satisfies Prisma.TransactionUncheckedUpdateInput;
+  const row = input.receiptId
+    ? await repository.withTransaction(async (tx) => {
+        const current = await repository.lockTransaction(tx, userId, transactionId);
+        if (!current) throw notFound("Transaction not found");
+        if (current.receipt && current.receipt.id !== input.receiptId) {
+          throw conflict("CONFLICT", "This transaction already has a receipt.");
+        }
+        const receipt = await repository.lockReceipt(tx, userId, input.receiptId!);
+        if (!receipt) throw notFound("Receipt not found");
+        if (receipt.transactionId && receipt.transactionId !== transactionId) {
+          throw conflict("CONFLICT", "This receipt is already attached to another transaction.");
+        }
+        await repository.updateTransaction(transactionId, userId, data, tx);
+        await repository.attachReceipt(tx, receipt.id, transactionId);
+        return repository.findTransactionResponse(transactionId, userId, tx).then((row) => row!);
+      })
+    : await repository.updateTransaction(transactionId, userId, data);
 
   return toTransactionResponse(row);
 }

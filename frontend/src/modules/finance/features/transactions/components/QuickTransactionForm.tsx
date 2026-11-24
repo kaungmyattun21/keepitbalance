@@ -15,6 +15,7 @@ import { cn } from "@/shared/lib/utils";
 import { categoryGroupsQuery } from "../../../shared/hooks/use-category-groups.ts";
 import { useQuickTransactionForm } from "../hooks/use-quick-transaction-form.ts";
 import { TransactionTypeField } from "./TransactionTypeField.tsx";
+import { TransactionReceiptField } from "../../receipts/components/TransactionReceiptField.tsx";
 
 function EntryForm({ categories, onSaved }: { categories: Category[]; onSaved: () => void }) {
   const user = useCurrentUser();
@@ -31,6 +32,10 @@ function EntryForm({ categories, onSaved }: { categories: Category[]; onSaved: (
     pressKey,
     handleAmountKey,
     handleSubmit,
+    receiptId,
+    selectReceipt,
+    applyReceiptDraft,
+    setReceiptUploading,
   } = useQuickTransactionForm({
     categories,
     today: todayIn(user.timezone ?? "UTC"),
@@ -74,6 +79,16 @@ function EntryForm({ categories, onSaved }: { categories: Category[]; onSaved: (
             <FieldError id="quick-transaction-amount-error" errors={[form.formState.errors.amount]} />
           </div>
           <div className="grid min-w-0 gap-4">
+            <TransactionReceiptField
+              receiptId={receiptId}
+              disabled={pending}
+              onSelect={selectReceipt}
+              onApply={(draft) => {
+                applyReceiptDraft(draft);
+                if (draft.merchant) setNoteOpen(true);
+              }}
+              onUploadingChange={setReceiptUploading}
+            />
             <SelectField
               control={form.control}
               name="categoryId"

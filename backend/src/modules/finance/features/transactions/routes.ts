@@ -34,6 +34,13 @@ transactionRoutes.post(
   controller.createTransaction,
 );
 
+transactionRoutes.get(
+  "/:id",
+  requireAuth,
+  validate({ params: transactionParamsSchema }),
+  controller.getTransaction,
+);
+
 transactionRoutes.put(
   "/:id",
   requireAuth,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { calendarDateSchema, moneySchema, uuidSchema } from "./schemas.ts";
+import { calendarDateSchema, moneySchema, paginationQuerySchema, uuidSchema } from "./schemas.ts";
 import { createTransactionSchema } from "./finance.ts";
 
 export const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
@@ -14,6 +14,10 @@ export const uploadReceiptSchema = z.strictObject({
     .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/, "Invalid image encoding."),
 });
 export const receiptParamsSchema = z.object({ id: uuidSchema });
+export const listReceiptsQuerySchema = paginationQuerySchema.extend({
+  unconfirmed: z.enum(["true"]).optional(),
+});
+export type ListReceiptsQuery = z.output<typeof listReceiptsQuerySchema>;
 
 export const receiptDraftSchema = z.object({
   merchant: z.string().nullable(),
@@ -23,7 +27,7 @@ export const receiptDraftSchema = z.object({
 });
 
 export const confirmReceiptSchema = createTransactionSchema
-  .omit({ type: true })
+  .omit({ type: true, receiptId: true })
   .extend({ merchant: z.string().trim().max(200).optional() });
 
 export type UploadReceipt = z.infer<typeof uploadReceiptSchema>;

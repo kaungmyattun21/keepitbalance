@@ -5,8 +5,8 @@ export function findReceipt(userId: string, id: string) {
   return prisma.receipt.findFirst({ where: { id, userId }, select: { ...receiptSelect, rawText: true } });
 }
 
-export function listReceipts(userId: string, page: number, pageSize: number) {
-  const where = { userId };
+export function listReceipts(userId: string, page: number, pageSize: number, unconfirmed = false) {
+  const where = { userId, ...(unconfirmed ? { status: { not: "confirmed" } } : {}) };
   return prisma.$transaction([
     prisma.receipt.findMany({
       where,

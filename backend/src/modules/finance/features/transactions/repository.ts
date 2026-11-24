@@ -8,6 +8,7 @@ const transactionSelect = {
   date: true,
   note: true,
   shoppingListId: true,
+  receipt: { select: { id: true } },
   createdAt: true,
   updatedAt: true,
   category: { select: { id: true, name: true, type: true, groupId: true, icon: true } },
@@ -31,8 +32,36 @@ export function findCategory(userId: string, categoryId: string) {
   });
 }
 
-export function createTransaction(data: Prisma.TransactionUncheckedCreateInput): Promise<TransactionRow> {
-  return prisma.transaction.create({ data, select: transactionSelect });
+export function createTransaction(
+  data: Prisma.TransactionUncheckedCreateInput,
+  tx: Prisma.TransactionClient = prisma,
+): Promise<TransactionRow> {
+  return tx.transaction.create({ data, select: transactionSelect });
+}
+
+export function withTransaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>) {
+  return prisma.$transaction(work);
+}
+
+export async function lockReceipt(tx: Prisma.TransactionClient, userId: string, id: string) {
+  await tx.$queryRaw`SELECT id FROM receipts WHERE id = ${id}::uuid AND user_id = ${userId}::uuid FOR UPDATE`;
+  return tx.receipt.findFirst({ where: { id, userId }, select: { id: true, transactionId: true } });
+}
+
+export async function lockTransaction(tx: Prisma.TransactionClient, userId: string, id: string) {
+  await tx.$queryRaw`SELECT id FROM transactions WHERE id = ${id}::uuid AND user_id = ${userId}::uuid FOR UPDATE`;
+  return findTransaction(id, userId, tx);
+}
+
+export function attachReceipt(tx: Prisma.TransactionClient, receiptId: string, transactionId: string) {
+  return tx.receipt.update({
+    where: { id: receiptId },
+    data: { transactionId, status: "confirmed", error: null },
+  });
+}
+
+export function findTransactionResponse(id: string, userId: string, tx: Prisma.TransactionClient = prisma) {
+  return tx.transaction.findFirst({ where: { id, userId }, select: transactionSelect });
 }
 
 export async function findTransactionPage(
@@ -59,8 +88,8 @@ export async function findTransactionPage(
   return { rows, total };
 }
 
-export function findTransaction(id: string, userId: string) {
-  return prisma.transaction.findFirst({
+export function findTransaction(id: string, userId: string, tx: Prisma.TransactionClient = prisma) {
+  return tx.transaction.findFirst({
     where: { id, userId },
     select: {
       id: true,
@@ -76,8 +105,9 @@ export function updateTransaction(
   id: string,
   userId: string,
   data: Prisma.TransactionUncheckedUpdateInput,
+  tx: Prisma.TransactionClient = prisma,
 ): Promise<TransactionRow> {
-  return prisma.transaction.update({ where: { id, userId }, data, select: transactionSelect });
+  return tx.transaction.update({ where: { id, userId }, data, select: transactionSelect });
 }
 
 export async function deleteTransaction(id: string, userId: string): Promise<void> {

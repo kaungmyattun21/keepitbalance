@@ -6,6 +6,7 @@ import { getReceiptQueue, RECEIPT_QUEUE, type ReceiptJob } from "./queue.ts";
 import * as queue from "./queue.ts";
 import * as ocr from "./ocr-provider.ts";
 import { processReceipt, startReceiptWorker } from "./processor.ts";
+import * as transactionRepository from "../transactions/repository.ts";
 
 let agent: Agent;
 let photo: { contentType: string; data: string };
@@ -47,6 +48,115 @@ async function fetchJob() {
 const purchase = () => ({ categoryId, amount: "6.05", date: "2026-11-09", merchant: "Fresh Market" });
 
 describe("receipt jobs", () => {
+  it("saves a normal transaction with its receipt while OCR is pending and exposes it in details", async () => {
+    const id = await upload();
+    const job = await fetchJob();
+    const response = await agent
+      .post("/api/v1/transactions")
+      .send({ ...purchase(), type: "expense", receiptId: id });
+    expect(response.status).toBe(201);
+    expect(response.body.receipt).toEqual({ id, imageUrl: `/receipts/${id}/image` });
+    const detail = await agent.get(`/api/v1/transactions/${response.body.id}`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.receipt).toEqual(response.body.receipt);
+    expect(detail.body.rawText).toBeUndefined();
+    expect((await agent.get(`/api/v1/receipts/${id}`)).body.data.status).toBe("confirmed");
+    expect((await agent.get("/api/v1/receipts?unconfirmed=true")).body.data).toHaveLength(0);
+    const lateRecognition = vi.fn(async () => text);
+    await processReceipt(job, lateRecognition);
+    expect(lateRecognition).not.toHaveBeenCalled();
+    expect((await newAgent().get(`/api/v1/transactions/${response.body.id}`)).status).toBe(401);
+    const other = newAgent();
+    await signUp(other, { email: "detail-other@example.com" });
+    expect((await other.get(`/api/v1/transactions/${response.body.id}`)).status).toBe(404);
+  });
+
+  it("creates only one transaction when a receipt form is submitted concurrently", async () => {
+    const id = await upload();
+    const body = { ...purchase(), type: "expense", receiptId: id };
+    const [first, second] = await Promise.all([
+      agent.post("/api/v1/transactions").send(body),
+      agent.post("/api/v1/transactions").send(body),
+    ]);
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(first.body.id).toBe(second.body.id);
+    expect(await prisma.transaction.count()).toBe(1);
+  });
+
+  it("attaches receipts on edit, preserves them on ordinary edits, and prevents reuse or replacement", async () => {
+    const id = await upload();
+    const body = { ...purchase(), type: "expense" };
+    const original = await agent.post("/api/v1/transactions").send(body);
+    expect(original.body.receipt).toBeNull();
+    const attached = await agent
+      .put(`/api/v1/transactions/${original.body.id}`)
+      .send({ ...body, receiptId: id });
+    expect(attached.status).toBe(200);
+    expect(attached.body.receipt.id).toBe(id);
+    const edited = await agent
+      .put(`/api/v1/transactions/${original.body.id}`)
+      .send({ ...body, amount: "9.00" });
+    expect(edited.body.receipt.id).toBe(id);
+    const different = await agent.post("/api/v1/transactions").send(body);
+    expect(
+      (
+        await agent
+          .put(`/api/v1/transactions/${different.body.id}`)
+          .send({ ...body, receiptId: id, amount: "50.00" })
+      ).status,
+    ).toBe(409);
+    expect((await agent.get(`/api/v1/transactions/${different.body.id}`)).body.amount).toBe("6.05");
+    photo.data = (
+      await sharp({ create: { width: 101, height: 100, channels: 3, background: "white" } })
+        .png()
+        .toBuffer()
+    ).toString("base64");
+    const replacement = await upload();
+    expect(
+      (await agent.put(`/api/v1/transactions/${original.body.id}`).send({ ...body, receiptId: replacement }))
+        .status,
+    ).toBe(409);
+    expect((await agent.get(`/api/v1/receipts/${replacement}`)).body.data.status).toBe("queued");
+  });
+
+  it("checks receipt ownership and rolls back transaction creation if attachment fails", async () => {
+    const id = await upload();
+    const other = newAgent();
+    await signUp(other, { email: "attach-other@example.com" });
+    const categories = await other.get("/api/v1/categories");
+    const ownCategory = categories.body.data.find((row: { type: string }) => row.type === "expense").id;
+    expect(
+      (
+        await other
+          .post("/api/v1/transactions")
+          .send({ ...purchase(), categoryId: ownCategory, type: "expense", receiptId: id })
+      ).status,
+    ).toBe(404);
+    expect(await prisma.transaction.count()).toBe(0);
+    vi.spyOn(transactionRepository, "attachReceipt").mockRejectedValueOnce(
+      new Error("Simulated attachment failure"),
+    );
+    expect(
+      (await agent.post("/api/v1/transactions").send({ ...purchase(), type: "expense", receiptId: id }))
+        .status,
+    ).toBe(500);
+    expect(await prisma.transaction.count()).toBe(0);
+    expect((await agent.get(`/api/v1/receipts/${id}`)).body.data.status).toBe("queued");
+  });
+
+  it("accepts a receipt as evidence for an income transaction", async () => {
+    const id = await upload();
+    const categories = await agent.get("/api/v1/categories");
+    const incomeCategory = categories.body.data.find((row: { type: string }) => row.type === "income").id;
+    const response = await agent
+      .post("/api/v1/transactions")
+      .send({ ...purchase(), categoryId: incomeCategory, type: "income", receiptId: id });
+    expect(response.status).toBe(201);
+    expect(response.body.type).toBe("income");
+    expect(response.body.receipt.id).toBe(id);
+  });
+
   it("persists uploads with jobs, reuses identical files concurrently, and isolates users", async () => {
     const [first, second] = await Promise.all([
       agent.post("/api/v1/receipts").send(photo),

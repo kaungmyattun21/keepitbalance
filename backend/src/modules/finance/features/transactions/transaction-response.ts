@@ -18,6 +18,7 @@ export function toTransactionResponse(row: TransactionRow): Transaction {
       type: toApiType[row.category.type],
     },
     shoppingListId: row.shoppingListId,
+    receipt: row.receipt ? { id: row.receipt.id, imageUrl: `/receipts/${row.receipt.id}/image` } : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

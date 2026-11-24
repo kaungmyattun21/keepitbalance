@@ -35,6 +35,7 @@ export function findMerchant(lines: string[], bankSlip: boolean): string | null 
     .join("\n");
   if (/\bc[o0]st\s*c[o0]\b/i.test(header)) return "Costco";
   if (/\bmakr[o0]\b|แม็คโคร|แมคโคร/i.test(header)) return "Makro";
+  if (/\baxtra\b/i.test(header)) return "CP Axtra";
 
   const candidate = lines
     .slice(0, 8)

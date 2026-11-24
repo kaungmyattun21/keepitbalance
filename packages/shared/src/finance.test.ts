@@ -28,6 +28,10 @@ describe("createTransactionSchema", () => {
   it("accepts valid input", () => {
     expect(accepts(valid)).toBe(true);
   });
+  it("accepts an optional receipt id and rejects invalid attachment ids", () => {
+    expect(accepts({ ...valid, receiptId: "11111111-1111-4111-8111-111111111111" })).toBe(true);
+    expect(accepts({ ...valid, receiptId: "not-a-receipt" })).toBe(false);
+  });
 
   describe("amount", () => {
     it.each(["0", "0.0", "0.00"])("rejects zero written as %j", (amount) => {

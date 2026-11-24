@@ -6,7 +6,6 @@ import { SectionCard } from "@/shared/components/SectionCard";
 import { useCategories } from "../../shared/hooks/use-categories.ts";
 import { TransactionForm } from "./components/TransactionForm.tsx";
 import { TransactionList } from "./components/TransactionList.tsx";
-import { ReceiptImports } from "../receipts/ReceiptImports.tsx";
 
 export function TransactionsPage() {
   const location = useLocation();
@@ -29,9 +28,6 @@ export function TransactionsPage() {
         <TransactionForm categories={categories} today={todayIn(user.timezone ?? "UTC")} />
       </SectionCard>
       <TransactionList categories={categories} />
-      <div className="@4xl/finance:col-span-2">
-        <ReceiptImports categories={categories} />
-      </div>
     </div>
   );
 }

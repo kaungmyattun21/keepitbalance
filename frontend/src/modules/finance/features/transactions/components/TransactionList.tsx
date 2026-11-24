@@ -11,12 +11,14 @@ import { DeleteTransactionDialog } from "./DeleteTransactionDialog.tsx";
 import { EditTransactionDialog } from "./EditTransactionDialog.tsx";
 import { MonthSwitcher } from "../../../shared/components/MonthSwitcher.tsx";
 import { TransactionListItem } from "./TransactionListItem.tsx";
+import { TransactionDetailsDialog } from "./TransactionDetailsDialog.tsx";
 
 export function TransactionList({ categories }: { categories: Category[] }) {
   const { month, page, showMonth, showPage } = useTransactionListParams();
   const transactionPage = useTransactions({ month, page });
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
   const isEmpty = transactionPage.data.length === 0;
 
   return (
@@ -47,6 +49,7 @@ export function TransactionList({ categories }: { categories: Category[] }) {
               transaction={transaction}
               onEdit={setEditingTransaction}
               onDelete={setDeletingTransaction}
+              onView={setViewingTransaction}
             />
           ))}
         </ul>
@@ -58,6 +61,11 @@ export function TransactionList({ categories }: { categories: Category[] }) {
         </div>
       )}
 
+      <TransactionDetailsDialog
+        transaction={viewingTransaction}
+        onClose={() => setViewingTransaction(null)}
+        onEdit={setEditingTransaction}
+      />
       <EditTransactionDialog
         transaction={editingTransaction}
         categories={categories}

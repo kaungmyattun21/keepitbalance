@@ -120,6 +120,7 @@ export const createTransactionSchema = z.object({
   date: calendarDateSchema,
   categoryId: z.uuid("Choose a category."),
   note: noteSchema,
+  receiptId: z.uuid("Invalid receipt id.").optional(),
 });
 
 export type CreateTransactionInput = z.input<typeof createTransactionSchema>;
@@ -172,6 +173,7 @@ export type Transaction = {
   note: string | null;
   category: Category;
   shoppingListId: string | null;
+  receipt: { id: string; imageUrl: string } | null;
   createdAt: string;
   updatedAt: string;
 };

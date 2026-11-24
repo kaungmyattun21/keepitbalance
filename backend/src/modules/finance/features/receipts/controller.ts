@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import type { ConfirmReceiptValues, UploadReceipt } from "@keepitbalance/shared/receipts";
+import type { ConfirmReceiptValues, UploadReceipt, ListReceiptsQuery } from "@keepitbalance/shared/receipts";
 import { getUserId } from "../../../auth/index.ts";
 import * as service from "./service.ts";
 
@@ -11,8 +11,8 @@ export async function upload(req: Request, res: Response) {
     .json({ data: receipt, duplicate });
 }
 export async function list(req: Request, res: Response) {
-  const { page, pageSize } = req.query as unknown as { page: number; pageSize: number };
-  res.json(await service.listReceipts(getUserId(req), page, pageSize));
+  const { page, pageSize, unconfirmed } = req.query as unknown as ListReceiptsQuery;
+  res.json(await service.listReceipts(getUserId(req), page, pageSize, unconfirmed === "true"));
 }
 export async function get(req: Request, res: Response) {
   res.json({ data: await service.getReceipt(getUserId(req), String(req.params.id)) });

@@ -23,6 +23,10 @@ export async function listTransactions(req: Request, res: Response) {
   res.json(transactionPage);
 }
 
+export async function getTransaction(req: Request, res: Response) {
+  res.json(await service.getTransaction(getUserId(req), String(req.params.id)));
+}
+
 export async function summarizeTransactions(req: Request, res: Response) {
   const summary = await service.summarizeTransactions(
     getUserId(req),

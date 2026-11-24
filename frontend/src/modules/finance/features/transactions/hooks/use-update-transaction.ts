@@ -2,6 +2,7 @@ import type { Transaction, UpdateTransactionValues } from "@keepitbalance/shared
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/shared/lib/api";
 import { invalidateMoneyQueries } from "../../../shared/invalidate-money-queries.ts";
+import { invalidateReceiptQueries } from "../../receipts/queries.ts";
 
 type UpdateTransactionRequest = { id: string; values: UpdateTransactionValues };
 
@@ -11,6 +12,7 @@ export function useUpdateTransaction() {
   return useMutation({
     mutationFn: ({ id, values }: UpdateTransactionRequest) =>
       api.put<Transaction>(`/transactions/${id}`, values),
-    onSuccess: () => invalidateMoneyQueries(queryClient),
+    onSuccess: () =>
+      Promise.all([invalidateMoneyQueries(queryClient), invalidateReceiptQueries(queryClient)]),
   });
 }

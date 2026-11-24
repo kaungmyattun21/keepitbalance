@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { createElement, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import type { ReceiptDraft } from "@keepitbalance/shared/receipts";
 import { toast } from "sonner";
 import { ApiError } from "@/shared/lib/api";
 import { formatMoney } from "@/shared/lib/format";
@@ -33,6 +34,7 @@ function formValuesOf(transaction: Transaction): CreateTransactionInput {
     date: transaction.date,
     categoryId: transaction.category.id,
     note: transaction.note ?? "",
+    receiptId: transaction.receipt?.id,
   };
 }
 
@@ -46,6 +48,7 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
   const [formError, setFormError] = useState<string | null>(null);
+  const [receiptUploading, setReceiptUploading] = useState(false);
   const isEditing = transaction !== undefined;
   const isShoppingExpense = Boolean(transaction?.shoppingListId);
 
@@ -56,6 +59,7 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
 
   const groups = useCategoryGroups();
   const selectedType = useWatch({ control: form.control, name: "type" });
+  const receiptId = useWatch({ control: form.control, name: "receiptId" });
   const categoryOptions = categories
     .filter((category) => category.type === selectedType)
     .map((category) => ({
@@ -71,6 +75,7 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
   }
 
   async function submitTransaction(values: CreateTransactionValues) {
+    if (receiptUploading) return;
     setFormError(null);
     try {
       if (transaction) {
@@ -81,7 +86,7 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
       }
       const saved = await createTransaction.mutateAsync(values);
       toast.success(`${describeTransaction(saved)} added to ${saved.category.name}.`);
-      form.reset({ ...values, amount: "", note: "" });
+      form.reset({ ...values, amount: "", note: "", receiptId: undefined });
       onSaved?.();
     } catch (error) {
       showServerError(error);
@@ -131,6 +136,15 @@ export function useTransactionForm({ categories, today, transaction, onSaved }: 
     selectedType,
     categoryOptions,
     changeType,
+    receiptId,
+    receiptUploading,
+    setReceiptUploading,
+    selectReceipt: (id: string | undefined) => form.setValue("receiptId", id, { shouldDirty: true }),
+    applyReceiptDraft: (draft: ReceiptDraft) => {
+      if (draft.total) form.setValue("amount", draft.total, { shouldDirty: true, shouldValidate: true });
+      if (draft.date) form.setValue("date", draft.date, { shouldDirty: true, shouldValidate: true });
+      if (draft.merchant) form.setValue("note", draft.merchant, { shouldDirty: true });
+    },
     handleSubmit: form.handleSubmit(submitTransaction),
   };
 }

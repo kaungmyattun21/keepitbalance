@@ -57,8 +57,9 @@ export async function listReceipts(
   userId: string,
   page: number,
   pageSize: number,
+  unconfirmed = false,
 ): Promise<Page<ReturnType<typeof toReceiptResponse>>> {
-  const [rows, total] = await repository.listReceipts(userId, page, pageSize);
+  const [rows, total] = await repository.listReceipts(userId, page, pageSize, unconfirmed);
   const refreshed = await Promise.all(rows.map(refreshFailure));
   return {
     data: refreshed.map(toReceiptResponse),

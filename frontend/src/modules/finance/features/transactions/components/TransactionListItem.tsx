@@ -1,6 +1,6 @@
 import { CategoryIcon } from "../../../shared/components/CategoryIcon";
 import type { Transaction } from "@keepitbalance/shared/finance";
-import { ArrowDownLeft, ArrowUpRight, Pencil, ShoppingBasket, Trash2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Pencil, ShoppingBasket, Trash2, Paperclip } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { formatCalendarDate, formatMoney } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
@@ -9,9 +9,10 @@ type TransactionListItemProps = {
   transaction: Transaction;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
+  onView: (transaction: Transaction) => void;
 };
 
-export function TransactionListItem({ transaction, onEdit, onDelete }: TransactionListItemProps) {
+export function TransactionListItem({ transaction, onEdit, onDelete, onView }: TransactionListItemProps) {
   const isIncome = transaction.type === "income";
   const isShoppingExpense = transaction.shoppingListId !== null;
   const formattedDate = formatCalendarDate(transaction.date);
@@ -35,7 +36,12 @@ export function TransactionListItem({ transaction, onEdit, onDelete }: Transacti
         </span>
       )}
 
-      <div className="col-start-2 min-w-0 flex-1">
+      <button
+        type="button"
+        className="col-start-2 min-w-0 flex-1 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-ring"
+        aria-label={`View ${accessibleName}`}
+        onClick={() => onView(transaction)}
+      >
         <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
           <span className="min-w-0 truncate">{transaction.category.name}</span>
           {isShoppingExpense && (
@@ -45,12 +51,19 @@ export function TransactionListItem({ transaction, onEdit, onDelete }: Transacti
               className="size-3.5 shrink-0 text-muted-foreground"
             />
           )}
+          {transaction.receipt && (
+            <Paperclip
+              role="img"
+              aria-label="Receipt attached"
+              className="size-3.5 shrink-0 text-muted-foreground"
+            />
+          )}
         </p>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {formattedDate}
           {transaction.note && ` · ${transaction.note}`}
         </p>
-      </div>
+      </button>
 
       <p
         className={cn(
@@ -73,7 +86,7 @@ export function TransactionListItem({ transaction, onEdit, onDelete }: Transacti
         >
           <Pencil />
         </Button>
-        {!isShoppingExpense && (
+        {!isShoppingExpense && !transaction.receipt && (
           <Button
             variant="ghost"
             size="icon-sm"

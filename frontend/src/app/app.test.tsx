@@ -175,6 +175,7 @@ describe("quick transaction log", () => {
       ...values,
       category: categories.find((category) => category.id === values.categoryId),
       shoppingListId: null,
+      receipt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

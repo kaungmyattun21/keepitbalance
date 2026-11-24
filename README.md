@@ -131,7 +131,8 @@ Verification and password-reset emails are printed in the API's terminal.
 
 ## How receipt background jobs work
 
-Open **Finance → Transactions → Receipts** to upload an image. Start the API/web app with
+Open **Finance → Transactions → Add transaction → Add receipt** to upload an optional image
+inside the form. The mobile quick-log form supports the same attachment. Start the API/web app with
 `pnpm dev` and run `pnpm --filter backend worker:dev` in another terminal. Both processes
 use the backend's `DATABASE_URL`; no Redis or cloud OCR credentials are required.
 After building, use `pnpm --filter backend start` and `pnpm --filter backend worker:start`.
@@ -150,10 +151,17 @@ Separate Node worker
   → Prisma saves the draft; the job finishes
 
 Browser polls receipt status
-  → user reviews or corrects suggestions
-  → confirmation saves one categorized expense
+  → user chooses Use scanned details, then reviews or corrects the transaction form
+  → saving the transaction atomically links its receipt
   → existing transaction summaries calculate budget spending
+  → transaction details show the attached receipt image
 ```
+
+Users can save manually entered details while OCR is pending, or attach a receipt when editing
+a transaction that has none. Receipt evidence is supported for income and expenses; the user
+chooses the transaction type. A late OCR result never overwrites a saved transaction. Scanned
+suggestions never automatically replace form edits. **Continue an earlier receipt** resumes an
+unfinished upload within the form. Already-linked receipts cannot be reused for another transaction.
 
 The API accepts work; the queue remembers work; the worker performs work. Stopping the worker
 leaves uploads queued. Restarting it resumes processing. pg-boss creates and maintains its own
@@ -167,7 +175,8 @@ Read the implementation in this order:
    jobs through pg-boss's Prisma transaction adapter. A job contains a receipt ID and version,
    never image bytes.
 3. `.../receipts/service.ts`: accepts uploads, reuses identical file hashes for the same user,
-   and confirms purchases under a database row lock.
+   and exposes private images and unfinished scans. `.../transactions/service.ts` saves the
+   transaction and receipt link together under database row locks.
 4. `backend/src/worker.ts` and `.../receipts/processor.ts`: start one worker consumer, process
    jobs, save results, and throw on errors so pg-boss can retry.
 5. `.../receipts/ocr-provider.ts`: performs bounded image preparation and local OCR.
@@ -186,9 +195,9 @@ Costco/Makro header aliases improve merchant suggestions; generic headings such 
 are not treated as merchants. Bank transfer slips suggest a recipient rather than the bank,
 and warn that an internal transfer must not be saved as an expense. Low OCR confidence also
 triggers a warning. These are heuristics requiring human review, not verified document understanding.
-Use **Reprocess receipt** on an unconfirmed draft to apply recognition improvements to an existing
+Use **Scan again** on an unconfirmed draft to apply recognition improvements to an existing
 upload; this preserves duplicate-file identity and rejects stale worker results. Confirmed receipts
-cannot be reprocessed. Reprocessing replaces unsaved form edits.
+cannot be reprocessed. Apply new suggestions explicitly with **Use scanned details**.
 Line items, pantry updates, and matching different photographs of the same receipt are future work. Exact-file deduplication
 uses SHA-256 and only reuses the current user's receipt. Images are stored privately in PostgreSQL
 for this first version; moving them to object storage can be a separate change.

@@ -88,6 +88,7 @@ function transactionFixture(overrides: Partial<Transaction> = {}): Transaction {
     note: "Weekly shop",
     category: groceries,
     shoppingListId: null,
+    receipt: null,
     createdAt: "2026-10-05T08:00:00.000Z",
     updatedAt: "2026-10-05T08:00:00.000Z",
     ...overrides,
@@ -222,6 +223,7 @@ describe("add transaction form", () => {
         note: body.note ?? null,
         category: groceries,
         shoppingListId: null,
+        receipt: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });

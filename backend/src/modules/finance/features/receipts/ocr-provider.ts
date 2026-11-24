@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWorker, PSM } from "tesseract.js";
 import sharp from "sharp";
-import { RECEIPT_MAX_PIXELS } from "./image.ts";
 import { receiptTextFromLayout } from "./ocr-layout.ts";
+import { prepareReceiptImage } from "./receipt-image-preparation.ts";
+import { combineReadings } from "./ocr-reading.ts";
+import { parseReceipt } from "./receipt-parser.ts";
 
 export type OcrResult = { text: string; confidence: number };
 export type OcrProvider = (image: Uint8Array, signal?: AbortSignal) => Promise<string | OcrResult>;
@@ -29,15 +31,7 @@ export const recognizeReceipt: OcrProvider = async (image, signal) => {
   try {
     return await Promise.race([
       (async () => {
-        const prepared = await sharp(image, { limitInputPixels: RECEIPT_MAX_PIXELS })
-          .rotate()
-          .flatten({ background: "white" })
-          .resize({ width: 2000, height: 8000, fit: "inside", withoutEnlargement: true })
-          .grayscale()
-          .normalize()
-          .sharpen()
-          .png()
-          .toBuffer();
+        const prepared = await prepareReceiptImage(image);
         if (expired) throw new Error("OCR interrupted");
         // Both models must be in one directory. Use names rather than Lang objects:
         // Tesseract.js 7 initializes object languages using their data instead of code.
@@ -63,15 +57,46 @@ export const recognizeReceipt: OcrProvider = async (image, signal) => {
           throw new Error("OCR interrupted");
         }
         await worker.setParameters({
-          tessedit_pageseg_mode: PSM.AUTO,
+          tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
           preserve_interword_spaces: "1",
           user_defined_dpi: "300",
         });
-        const result = await worker.recognize(prepared, { rotateAuto: true }, { text: true, blocks: true });
-        return {
-          text: receiptTextFromLayout(result.data).slice(0, 40_000),
-          confidence: result.data.confidence,
+        const read = async (input: Buffer): Promise<OcrResult> => {
+          if (expired) throw new Error("OCR interrupted");
+          const { data } = await worker!.recognize(input, {}, { text: true, blocks: true });
+          return { text: receiptTextFromLayout(data).slice(0, 40_000), confidence: data.confidence };
         };
+        const readings = [await read(prepared.full)];
+        if (prepared.cropped) readings.push(await read(prepared.cropped));
+        if (readings[0]!.text.replace(/\s/g, "").length < 150 || readings[0]!.confidence < 60) {
+          await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+          readings.push(await read(prepared.full));
+        }
+        const primary = combineReadings(readings);
+        if (parseReceipt(primary.text).total) return primary;
+
+        // Small overlapping bands prevent a logo, stamp or QR code from making
+        // the page detector ignore the payment area. Keep the whole reading too.
+        const bandImage = prepared.cropped ?? prepared.full;
+        const { width, height } = await sharp(bandImage).metadata();
+        const supplements: string[] = [];
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK });
+        for (const fraction of [0.45, 0.62, 0.79]) {
+          const top = Math.floor(height! * fraction);
+          const band = await sharp(bandImage)
+            .extract({
+              left: 0,
+              top,
+              width: width!,
+              height: Math.min(Math.ceil(height! * 0.23), height! - top),
+            })
+            .png()
+            .toBuffer();
+          const reading = await read(band);
+          if (/\b(?:TOTAL|OTAL|OTA|VAT|CASH|ASH|THB)\b|ยอด|จำนวนเงิน/i.test(reading.text))
+            supplements.push(reading.text);
+        }
+        return { ...primary, text: [primary.text, ...supplements].join("\n\n").slice(0, 40_000) };
       })(),
       stopped,
     ]);

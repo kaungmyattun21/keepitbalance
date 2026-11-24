@@ -8,7 +8,7 @@ export function useQuickTransactionForm(options: TransactionFormOptions) {
   const transaction = useTransactionForm(options);
   const { form } = transaction;
   const amount = useWatch({ control: form.control, name: "amount" });
-  const pending = form.formState.isSubmitting;
+  const pending = form.formState.isSubmitting || transaction.receiptUploading;
   function pressKey(key: string) {
     if (pending) return;
     form.setValue("amount", amountAfterKey(form.getValues("amount"), key), {

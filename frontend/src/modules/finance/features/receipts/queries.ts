@@ -6,11 +6,9 @@ import {
   type Receipt,
   type ReceiptDetail,
   type UploadReceipt,
-  type ConfirmReceiptValues,
 } from "@keepitbalance/shared/receipts";
 import { api } from "@/shared/lib/api";
 import { financeKeys } from "../../shared/query-keys.ts";
-import { invalidateMoneyQueries } from "../../shared/invalidate-money-queries.ts";
 
 const receiptKeys = {
   all: [...financeKeys.all, "receipts"] as const,
@@ -22,7 +20,8 @@ export const receiptPending = (receipt: Receipt) => ["queued", "processing"].inc
 export function receiptsQuery(page: number) {
   return queryOptions({
     queryKey: receiptKeys.list(page),
-    queryFn: ({ signal }) => api.get<Page<Receipt>>("/receipts", { query: { page, pageSize: 5 }, signal }),
+    queryFn: ({ signal }) =>
+      api.get<Page<Receipt>>("/receipts", { query: { page, pageSize: 5, unconfirmed: true }, signal }),
     refetchInterval: (query) => (query.state.data?.data.some(receiptPending) ? 3000 : false),
   });
 }
@@ -57,22 +56,20 @@ export function useUploadReceipt() {
   });
 }
 
-export function useReceiptAction(id: string) {
+export function useRetryReceipt(id: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (values: ConfirmReceiptValues | "retry") =>
-      values === "retry"
-        ? api.post<{ data: Receipt }>(`/receipts/${id}/retry`)
-        : api.post<{ data: Receipt }>(`/receipts/${id}/confirm`, values),
+    mutationFn: () => api.post<{ data: Receipt }>(`/receipts/${id}/retry`),
     onSuccess: async ({ data }) => {
       client.setQueryData<ReceiptDetail>(receiptKeys.detail(id), (previous) => ({
         ...data,
         rawText: previous?.rawText ?? null,
       }));
-      await Promise.all([
-        client.invalidateQueries({ queryKey: receiptKeys.all }),
-        ...(data.status === "confirmed" ? [invalidateMoneyQueries(client)] : []),
-      ]);
+      await client.invalidateQueries({ queryKey: receiptKeys.all });
     },
   });
+}
+
+export function invalidateReceiptQueries(client: ReturnType<typeof useQueryClient>) {
+  return client.invalidateQueries({ queryKey: receiptKeys.all });
 }

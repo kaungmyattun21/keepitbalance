@@ -9,6 +9,7 @@ import { FieldGroup } from "@/shared/components/ui/field";
 import { useTransactionForm } from "../hooks/use-transaction-form.ts";
 import type { TransactionFormOptions } from "../types.ts";
 import { TransactionTypeField } from "./TransactionTypeField.tsx";
+import { TransactionReceiptField } from "../../receipts/components/TransactionReceiptField.tsx";
 
 type TransactionFormProps = TransactionFormOptions & {
   onCancel?: () => void;
@@ -24,6 +25,11 @@ export function TransactionForm({ onCancel, ...options }: TransactionFormProps) 
     categoryOptions,
     changeType,
     handleSubmit,
+    receiptId,
+    receiptUploading,
+    setReceiptUploading,
+    selectReceipt,
+    applyReceiptDraft,
   } = useTransactionForm(options);
   const { isSubmitting } = form.formState;
   const submitLabel = isEditing ? "Save changes" : "Add transaction";
@@ -36,6 +42,15 @@ export function TransactionForm({ onCancel, ...options }: TransactionFormProps) 
 
         <FieldGroup>
           <TransactionTypeField value={selectedType} onChange={changeType} disabled={isShoppingExpense} />
+          <TransactionReceiptField
+            receiptId={receiptId}
+            transactionId={options.transaction?.id}
+            locked={Boolean(options.transaction?.receipt)}
+            disabled={isSubmitting}
+            onSelect={selectReceipt}
+            onApply={applyReceiptDraft}
+            onUploadingChange={setReceiptUploading}
+          />
 
           <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 @md/field-group:grid-cols-2">
             <TextField
@@ -72,7 +87,7 @@ export function TransactionForm({ onCancel, ...options }: TransactionFormProps) 
                 Cancel
               </Button>
             )}
-            <Button type="submit" className="sm:min-w-36" disabled={isSubmitting}>
+            <Button type="submit" className="sm:min-w-36" disabled={isSubmitting || receiptUploading}>
               {isSubmitting ? pendingLabel : submitLabel}
             </Button>
           </div>
