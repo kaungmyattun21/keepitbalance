@@ -18,6 +18,8 @@ const AMOUNT = new RegExp(
 const LEADING_WORDS =
   /^(?:(?:i|and|then|just)\s+)*(?:spent|paid|bought|got paid|received|earned|expense|income|for|on|at|of|a|an|the)\b\s*/i;
 const TRAILING_WORDS = /\s*\b(?:for|on|at|of|and)$/i;
+// "coffee coffee" or "iced latte iced latte". Numbers are left alone so "1 000 000" stays intact.
+const REPEATED_WORDS = /\b(\p{L}[\p{L}'-]*(?:\s+\p{L}[\p{L}'-]*){0,3})(?:\s+\1)+(?![\p{L}'-])/giu;
 
 function shiftDay(date: string, days: number): string {
   const [year, month, day] = date.split("-").map(Number) as [number, number, number];
@@ -51,7 +53,7 @@ function findDate(text: string, today: string): { date: string; phrase: string }
   return null;
 }
 
-function findAmount(text: string): { amount: string; phrase: string } | null {
+function findAmount(text: string): { amount: string; phrases: string[] } | null {
   const candidates = [...text.matchAll(AMOUNT)].map((match) => {
     const whole = match[1]!.replace(/[, ]/g, "");
     return {
@@ -67,7 +69,9 @@ function findAmount(text: string): { amount: string; phrase: string } | null {
   const labelled = valid.filter((candidate) => candidate.labelled);
   const pool = labelled.length ? labelled : valid;
   const best = pool.reduce((largest, candidate) => (candidate.value > largest.value ? candidate : largest));
-  return { amount: best.amount, phrase: best.phrase };
+  // "85 85": a repeated amount is the same amount, not part of the note.
+  const repeats = valid.filter((candidate) => candidate.value === best.value);
+  return { amount: best.amount, phrases: repeats.map((candidate) => candidate.phrase) };
 }
 
 function cleanNote(text: string): string | undefined {
@@ -81,7 +85,7 @@ function cleanNote(text: string): string | undefined {
 }
 
 export function parseQuickEntry(text: string, today: string): QuickEntry {
-  let rest = text.trim();
+  let rest = text.trim().replace(REPEATED_WORDS, "$1");
   const entry: QuickEntry = {};
 
   if (INCOME.test(rest)) entry.type = "income";
@@ -96,7 +100,7 @@ export function parseQuickEntry(text: string, today: string): QuickEntry {
   const amount = findAmount(rest);
   if (amount) {
     entry.amount = amount.amount;
-    rest = rest.replace(amount.phrase, " ");
+    for (const phrase of amount.phrases) rest = rest.replace(phrase, " ");
   }
 
   const note = cleanNote(rest);

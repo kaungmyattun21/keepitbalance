@@ -44,10 +44,13 @@ class FakeRecognition implements SpeechRecognitionLike {
   abort = vi.fn();
 }
 
-function say(text: string) {
+function say(...results: string[]) {
   const recognition = FakeRecognition.current!;
   act(() => {
-    recognition.onresult?.({ resultIndex: 0, results: [{ isFinal: true, 0: { transcript: text } }] });
+    recognition.onresult?.({
+      resultIndex: 0,
+      results: results.map((transcript) => ({ isFinal: true, 0: { transcript } })),
+    });
     recognition.onend?.();
   });
 }
@@ -70,9 +73,9 @@ function renderForm(transaction?: Transaction) {
   );
 }
 
-async function speak(text: string) {
+async function speak(...results: string[]) {
   await userEvent.click(screen.getByRole("button", { name: "Speak transaction" }));
-  say(text);
+  say(...results);
 }
 
 async function submittedBody() {
@@ -161,6 +164,17 @@ describe("voice entry in the transaction form", () => {
     await speak("dinner 150 today");
     expect(input("Amount").value).toBe("12");
     expect(input("Note").value).toBe("Dinner");
+  });
+
+  it("merges results that repeat earlier words, as Chrome on Android does", async () => {
+    renderForm();
+
+    await speak("coffee", "coffee 85", "yesterday");
+
+    expect(screen.getByRole("status").textContent).toBe("Heard: “coffee 85 yesterday”");
+    expect(input("Amount").value).toBe("85");
+    expect(input("Date").value).toBe("2026-11-23");
+    expect(input("Note").value).toBe("Coffee");
   });
 
   it("shows a clear message when the microphone is blocked", async () => {

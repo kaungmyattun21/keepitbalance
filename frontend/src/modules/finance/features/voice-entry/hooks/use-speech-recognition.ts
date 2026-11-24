@@ -14,6 +14,17 @@ function recognitionConstructor(): SpeechRecognitionConstructor | undefined {
   return window.SpeechRecognition ?? window.webkitSpeechRecognition;
 }
 
+// Chrome on Android can repeat earlier words in each new result ("coffee", "coffee 85"),
+// so a result that already contains the text so far replaces it instead of being appended.
+export function joinResults(parts: string[]): string {
+  return parts.reduce((text, part) => {
+    const next = part.trim();
+    if (next.toLowerCase().startsWith(text.toLowerCase())) return next;
+    if (!next || text.toLowerCase().endsWith(next.toLowerCase())) return text;
+    return `${text} ${next}`;
+  }, "");
+}
+
 type Options = { lang?: string; onFinalTranscript: (text: string) => void };
 
 export function useSpeechRecognition({ lang = "en-US", onFinalTranscript }: Options) {
@@ -38,13 +49,11 @@ export function useSpeechRecognition({ lang = "en-US", onFinalTranscript }: Opti
     instance.maxAlternatives = 1;
     let finalText = "";
     instance.onresult = (event) => {
-      let interim = "";
-      for (let index = event.resultIndex; index < event.results.length; index++) {
-        const result = event.results[index]!;
-        if (result.isFinal) finalText += result[0].transcript;
-        else interim += result[0].transcript;
-      }
-      setTranscript((finalText + interim).trim());
+      const results = Array.from(event.results);
+      finalText = joinResults(
+        results.filter((result) => result.isFinal).map((result) => result[0].transcript),
+      );
+      setTranscript(joinResults(results.map((result) => result[0].transcript)));
     };
     instance.onerror = (event) => {
       if (event.error === "aborted") return;

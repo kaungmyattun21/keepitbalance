@@ -28,6 +28,18 @@ describe("parseQuickEntry", () => {
     expect(parse("the 2 tickets 900")).toMatchObject({ amount: "900", note: "2 tickets" });
   });
 
+  it("ignores words and amounts said twice", () => {
+    expect(parse("coffee coffee 85")).toEqual({ amount: "85", note: "Coffee" });
+    expect(parse("Coffee coffee 85 85 yesterday yesterday")).toEqual({
+      amount: "85",
+      date: "2026-11-23",
+      note: "Coffee",
+    });
+    expect(parse("iced latte iced latte 120")).toMatchObject({ amount: "120", note: "Iced latte" });
+    expect(parse("car 1 000 000")).toMatchObject({ amount: "1000000", note: "Car" });
+    expect(parse("bus 20 lunch 20")).toMatchObject({ amount: "20", note: "Bus lunch" });
+  });
+
   it("prefers a labelled amount, otherwise the largest number", () => {
     expect(parse("2 coffees 170")).toMatchObject({ amount: "170", note: "2 coffees" });
     expect(parse("3 shirts 600 baht at the mall 2")).toMatchObject({ amount: "600" });
